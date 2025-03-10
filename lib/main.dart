@@ -6,13 +6,15 @@ void main() {
 }
 
 class MyApp extends StatelessWidget {
+  const MyApp({super.key});
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'When Did You Last?',
       theme: ThemeData(primarySwatch: Colors.blue),
-      home: MyHomePage(), // Set HomeScreen as the main screen
+      home: const MyHomePage(), // Set HomeScreen as the main screen
     );
   }
 }

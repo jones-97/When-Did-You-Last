@@ -1,21 +1,24 @@
 ///File download from FlutterViz- Drag and drop a tools. For more details visit https://flutterviz.io/
+library;
 
 import 'package:flutter/material.dart';
 
 class EditTask extends StatelessWidget {
+  const EditTask({super.key});
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Color(0xffffffff),
+      backgroundColor: const Color(0xffffffff),
       appBar: AppBar(
         elevation: 4,
         centerTitle: false,
         automaticallyImplyLeading: false,
-        backgroundColor: Color(0xffe8d63a),
-        shape: RoundedRectangleBorder(
+        backgroundColor: const Color(0xffe8d63a),
+        shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.zero,
         ),
-        title: Text(
+        title: const Text(
           "Edit Task",
           style: TextStyle(
             fontWeight: FontWeight.w400,
@@ -24,7 +27,7 @@ class EditTask extends StatelessWidget {
             color: Color(0xff000000),
           ),
         ),
-        leading: Icon(
+        leading: const Icon(
           Icons.arrow_back,
           color: Color(0xff212435),
           size: 24,
@@ -35,7 +38,7 @@ class EditTask extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.center,
         mainAxisSize: MainAxisSize.max,
         children: [
-          Padding(
+          const Padding(
             padding: EdgeInsets.fromLTRB(0, 10, 0, 0),
             child: Text(
               "Task Name: ",
@@ -50,13 +53,13 @@ class EditTask extends StatelessWidget {
             ),
           ),
           Padding(
-            padding: EdgeInsets.fromLTRB(0, 10, 0, 0),
+            padding: const EdgeInsets.fromLTRB(0, 10, 0, 0),
             child: TextField(
               controller: TextEditingController(),
               obscureText: false,
               textAlign: TextAlign.start,
               maxLines: 1,
-              style: TextStyle(
+              style: const TextStyle(
                 fontWeight: FontWeight.w400,
                 fontStyle: FontStyle.normal,
                 fontSize: 14,
@@ -65,32 +68,32 @@ class EditTask extends StatelessWidget {
               decoration: InputDecoration(
                 disabledBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(4.0),
-                  borderSide: BorderSide(color: Color(0xff000000), width: 1),
+                  borderSide: const BorderSide(color: Color(0xff000000), width: 1),
                 ),
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(4.0),
-                  borderSide: BorderSide(color: Color(0xff000000), width: 1),
+                  borderSide: const BorderSide(color: Color(0xff000000), width: 1),
                 ),
                 enabledBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(4.0),
-                  borderSide: BorderSide(color: Color(0xff000000), width: 1),
+                  borderSide: const BorderSide(color: Color(0xff000000), width: 1),
                 ),
                 hintText: "Enter Text",
-                hintStyle: TextStyle(
+                hintStyle: const TextStyle(
                   fontWeight: FontWeight.w400,
                   fontStyle: FontStyle.normal,
                   fontSize: 14,
                   color: Color(0xff000000),
                 ),
                 filled: true,
-                fillColor: Color(0xfff2f2f3),
+                fillColor: const Color(0xfff2f2f3),
                 isDense: false,
                 contentPadding:
-                    EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+                    const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
               ),
             ),
           ),
-          Padding(
+          const Padding(
             padding: EdgeInsets.fromLTRB(0, 10, 0, 0),
             child: Text(
               "Enable Task Alert?",
@@ -105,33 +108,33 @@ class EditTask extends StatelessWidget {
             ),
           ),
           Padding(
-            padding: EdgeInsets.fromLTRB(0, 10, 0, 0),
+            padding: const EdgeInsets.fromLTRB(0, 10, 0, 0),
             child: SwitchListTile(
               value: false,
               onChanged: (value) {},
-              activeColor: Color(0xff3a57e8),
-              activeTrackColor: Color(0xff92c6ef),
-              inactiveThumbColor: Color(0xff9e9e9e),
-              inactiveTrackColor: Color(0xffe0e0e0),
+              activeColor: const Color(0xff3a57e8),
+              activeTrackColor: const Color(0xff92c6ef),
+              inactiveThumbColor: const Color(0xff9e9e9e),
+              inactiveTrackColor: const Color(0xffe0e0e0),
             ),
           ),
           Container(
-            margin: EdgeInsets.all(0),
-            padding: EdgeInsets.all(0),
+            margin: const EdgeInsets.all(0),
+            padding: const EdgeInsets.all(0),
             width: 200,
             height: 200,
             decoration: BoxDecoration(
-              color: Color(0x1f000000),
+              color: const Color(0x1f000000),
               shape: BoxShape.rectangle,
               borderRadius: BorderRadius.zero,
-              border: Border.all(color: Color(0x4d9e9e9e), width: 1),
+              border: Border.all(color: const Color(0x4d9e9e9e), width: 1),
             ),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.start,
               crossAxisAlignment: CrossAxisAlignment.center,
               mainAxisSize: MainAxisSize.max,
               children: [
-                Padding(
+                const Padding(
                   padding: EdgeInsets.fromLTRB(0, 10, 0, 0),
                   child: Text(
                     "Hour(s): ",
@@ -146,13 +149,13 @@ class EditTask extends StatelessWidget {
                   ),
                 ),
                 Padding(
-                  padding: EdgeInsets.fromLTRB(0, 10, 0, 0),
+                  padding: const EdgeInsets.fromLTRB(0, 10, 0, 0),
                   child: TextField(
                     controller: TextEditingController(),
                     obscureText: false,
                     textAlign: TextAlign.start,
                     maxLines: 1,
-                    style: TextStyle(
+                    style: const TextStyle(
                       fontWeight: FontWeight.w400,
                       fontStyle: FontStyle.normal,
                       fontSize: 14,
@@ -162,34 +165,34 @@ class EditTask extends StatelessWidget {
                       disabledBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(4.0),
                         borderSide:
-                            BorderSide(color: Color(0xff000000), width: 1),
+                            const BorderSide(color: Color(0xff000000), width: 1),
                       ),
                       focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(4.0),
                         borderSide:
-                            BorderSide(color: Color(0xff000000), width: 1),
+                            const BorderSide(color: Color(0xff000000), width: 1),
                       ),
                       enabledBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(4.0),
                         borderSide:
-                            BorderSide(color: Color(0xff000000), width: 1),
+                            const BorderSide(color: Color(0xff000000), width: 1),
                       ),
                       hintText: "Enter Text",
-                      hintStyle: TextStyle(
+                      hintStyle: const TextStyle(
                         fontWeight: FontWeight.w400,
                         fontStyle: FontStyle.normal,
                         fontSize: 14,
                         color: Color(0xff000000),
                       ),
                       filled: true,
-                      fillColor: Color(0xfff2f2f3),
+                      fillColor: const Color(0xfff2f2f3),
                       isDense: false,
                       contentPadding:
-                          EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+                          const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
                     ),
                   ),
                 ),
-                Padding(
+                const Padding(
                   padding: EdgeInsets.fromLTRB(0, 10, 0, 0),
                   child: Text(
                     "Day(s):",
@@ -204,13 +207,13 @@ class EditTask extends StatelessWidget {
                   ),
                 ),
                 Padding(
-                  padding: EdgeInsets.fromLTRB(0, 10, 0, 0),
+                  padding: const EdgeInsets.fromLTRB(0, 10, 0, 0),
                   child: TextField(
                     controller: TextEditingController(),
                     obscureText: false,
                     textAlign: TextAlign.start,
                     maxLines: 1,
-                    style: TextStyle(
+                    style: const TextStyle(
                       fontWeight: FontWeight.w400,
                       fontStyle: FontStyle.normal,
                       fontSize: 14,
@@ -220,34 +223,34 @@ class EditTask extends StatelessWidget {
                       disabledBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(4.0),
                         borderSide:
-                            BorderSide(color: Color(0xff000000), width: 1),
+                            const BorderSide(color: Color(0xff000000), width: 1),
                       ),
                       focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(4.0),
                         borderSide:
-                            BorderSide(color: Color(0xff000000), width: 1),
+                            const BorderSide(color: Color(0xff000000), width: 1),
                       ),
                       enabledBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(4.0),
                         borderSide:
-                            BorderSide(color: Color(0xff000000), width: 1),
+                            const BorderSide(color: Color(0xff000000), width: 1),
                       ),
                       hintText: "Enter Text",
-                      hintStyle: TextStyle(
+                      hintStyle: const TextStyle(
                         fontWeight: FontWeight.w400,
                         fontStyle: FontStyle.normal,
                         fontSize: 14,
                         color: Color(0xff000000),
                       ),
                       filled: true,
-                      fillColor: Color(0xfff2f2f3),
+                      fillColor: const Color(0xfff2f2f3),
                       isDense: false,
                       contentPadding:
-                          EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+                          const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
                     ),
                   ),
                 ),
-                Padding(
+                const Padding(
                   padding: EdgeInsets.fromLTRB(0, 10, 0, 0),
                   child: Text(
                     "Specific date and/or time:",
@@ -262,25 +265,28 @@ class EditTask extends StatelessWidget {
                   ),
                 ),
                 IconButton(
-                  icon: Icon(Icons.schedule),
+                  icon: const Icon(Icons.schedule),
                   onPressed: () {},
-                  color: Color(0xff212435),
+                  color: const Color(0xff212435),
                   iconSize: 24,
                 ),
               ],
             ),
           ),
           Padding(
-            padding: EdgeInsets.fromLTRB(0, 10, 0, 0),
+            padding: const EdgeInsets.fromLTRB(0, 10, 0, 0),
             child: MaterialButton(
               onPressed: () {},
-              color: Color(0xffffffff),
+              color: const Color(0xffffffff),
               elevation: 0,
-              shape: RoundedRectangleBorder(
+              shape: const RoundedRectangleBorder(
                 borderRadius: BorderRadius.zero,
                 side: BorderSide(color: Color(0xff808080), width: 1),
               ),
-              padding: EdgeInsets.all(16),
+              padding: const EdgeInsets.all(16),
+              textColor: const Color(0xff000000),
+              height: 40,
+              minWidth: 140,
               child: Text(
                 "SAVE",
                 style: TextStyle(
@@ -289,22 +295,22 @@ class EditTask extends StatelessWidget {
                   fontStyle: FontStyle.normal,
                 ),
               ),
-              textColor: Color(0xff000000),
-              height: 40,
-              minWidth: 140,
             ),
           ),
           Padding(
-            padding: EdgeInsets.fromLTRB(0, 10, 0, 0),
+            padding: const EdgeInsets.fromLTRB(0, 10, 0, 0),
             child: MaterialButton(
               onPressed: () {},
-              color: Color(0xffffffff),
+              color: const Color(0xffffffff),
               elevation: 0,
-              shape: RoundedRectangleBorder(
+              shape: const RoundedRectangleBorder(
                 borderRadius: BorderRadius.zero,
                 side: BorderSide(color: Color(0xff808080), width: 1),
               ),
-              padding: EdgeInsets.all(16),
+              padding: const EdgeInsets.all(16),
+              textColor: const Color(0xff000000),
+              height: 40,
+              minWidth: 140,
               child: Text(
                 "REMOVE",
                 style: TextStyle(
@@ -313,9 +319,6 @@ class EditTask extends StatelessWidget {
                   fontStyle: FontStyle.normal,
                 ),
               ),
-              textColor: Color(0xff000000),
-              height: 40,
-              minWidth: 140,
             ),
           ),
         ],

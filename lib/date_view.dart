@@ -1,4 +1,5 @@
 ///File download from FlutterViz- Drag and drop a tools. For more details visit https://flutterviz.io/
+library;
 
 import 'package:flutter/material.dart';
 import 'package:when_did_you_last/home_page.dart';
@@ -7,7 +8,7 @@ class DateView extends StatelessWidget {
 
    final DateTime selectedDate;
   
-   DateView({required this.selectedDate});
+   const DateView({super.key, required this.selectedDate});
 
   @override
   Widget build(BuildContext context) {
@@ -45,12 +46,12 @@ class DateView extends StatelessWidget {
         mainAxisSize: MainAxisSize.max,
         children: [
           Padding(
-            padding: EdgeInsets.fromLTRB(0, 10, 0, 0),
+            padding: const EdgeInsets.fromLTRB(0, 10, 0, 0),
             child: Text(
               selectedDate.toString(),
               textAlign: TextAlign.start,
               overflow: TextOverflow.clip,
-              style: TextStyle(
+              style: const TextStyle(
                 fontWeight: FontWeight.w400,
                 fontStyle: FontStyle.normal,
                 fontSize: 14,
@@ -58,7 +59,7 @@ class DateView extends StatelessWidget {
               ),
             ),
           ),
-          Padding(
+          const Padding(
             padding: EdgeInsets.fromLTRB(0, 10, 0, 0),
             child: Text(
               "Mark a Task as Done:",
@@ -73,13 +74,13 @@ class DateView extends StatelessWidget {
             ),
           ),
           Padding(
-            padding: EdgeInsets.fromLTRB(0, 10, 0, 0),
+            padding: const EdgeInsets.fromLTRB(0, 10, 0, 0),
             child: Container(
               width: 130,
               height: 50,
-              padding: EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+              padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
               decoration: BoxDecoration(
-                color: Color(0xffffffff),
+                color: const Color(0xffffffff),
                 borderRadius: BorderRadius.circular(0),
               ),
               child: DropdownButton(
@@ -90,7 +91,7 @@ class DateView extends StatelessWidget {
                     child: Text(value),
                   );
                 }).toList(),
-                style: TextStyle(
+                style: const TextStyle(
                   color: Color(0xff000000),
                   fontSize: 16,
                   fontWeight: FontWeight.w400,
@@ -103,16 +104,19 @@ class DateView extends StatelessWidget {
             ),
           ),
           Padding(
-            padding: EdgeInsets.fromLTRB(0, 10, 0, 0),
+            padding: const EdgeInsets.fromLTRB(0, 10, 0, 0),
             child: MaterialButton(
               onPressed: () {},
-              color: Color(0xffffffff),
+              color: const Color(0xffffffff),
               elevation: 0,
-              shape: RoundedRectangleBorder(
+              shape: const RoundedRectangleBorder(
                 borderRadius: BorderRadius.zero,
                 side: BorderSide(color: Color(0xff808080), width: 1),
               ),
-              padding: EdgeInsets.all(16),
+              padding: const EdgeInsets.all(16),
+              textColor: const Color(0xff000000),
+              height: 40,
+              minWidth: 140,
               child: Text(
                 "Add New Task",
                 style: TextStyle(
@@ -121,9 +125,6 @@ class DateView extends StatelessWidget {
                   fontStyle: FontStyle.normal,
                 ),
               ),
-              textColor: Color(0xff000000),
-              height: 40,
-              minWidth: 140,
             ),
           ),
         ],
