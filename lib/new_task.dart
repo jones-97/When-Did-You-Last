@@ -2,8 +2,8 @@
 library;
 
 import 'package:flutter/material.dart';
-import 'Data/DatabaseHelper.dart';
-import 'Models/Task.dart';
+import 'Data/database_helper.dart';
+import 'Models/task.dart';
 
 class NewTask extends StatefulWidget {
   @override

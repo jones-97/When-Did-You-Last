@@ -6,8 +6,8 @@ import 'dart:developer';
 import 'package:flutter/material.dart';
 import 'package:when_did_you_last/home_page.dart';
 import 'package:when_did_you_last/new_task.dart';
-import 'Data/DatabaseHelper.dart';
-import 'Models/Task.dart';
+import 'Data/database_helper.dart';
+import 'Models/task.dart';
 
 
 
@@ -76,10 +76,26 @@ class _TasksListState extends State<TasksList> {
       ),
       body: Column(
         children: [
+          //The List of Tasks
           Expanded( // Wrap ListView.builder in Expanded
             child: ListView.builder(
-              itemCount: _tasks.length,
+              
+              itemCount: _tasks.isEmpty ? 1 : _tasks.length,
               itemBuilder: (context, index) {
+                if (_tasks.isEmpty) {
+                return const ListTile(
+                  title: Center(
+                    child: Text(
+                      "Empty; Tasks will Appear Here",
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w500,
+                        color: Colors.grey,
+                      ),
+                    ),
+                  ),
+                );
+              }
                 final task = _tasks[index];
                 return ListTile(
                   minTileHeight: 20.0,
@@ -98,41 +114,50 @@ class _TasksListState extends State<TasksList> {
               },
             ),
           ),
+          //Ensuring the button is always visible
+
           Padding(
             padding: const EdgeInsets.fromLTRB(0, 10, 0, 0),
-            child: MaterialButton(
+            child: SizedBox(
+              width: 200,
+              child: ElevatedButton(
               onPressed: () {
                 Navigator.push(
                   context,
                   MaterialPageRoute(builder: (context) => NewTask()),
-                );
+                ).then((_) => _loadTasks());
               },
-              color: const Color(0xff3ae882),
+              style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xff3ae882),
               elevation: 0,
               shape: const RoundedRectangleBorder(
                 borderRadius: BorderRadius.zero,
                 side: BorderSide(color: Color(0xff808080), width: 1),
               ),
-              padding: const EdgeInsets.all(16),
-              textColor: const Color.fromARGB(255, 255, 255, 255),
-              height: 40,
-              minWidth: 140,
-              child: const Text(
+              ),
+              child: const Padding(
+              padding: EdgeInsets.all(16),
+              // textColor: const Color.fromARGB(255, 255, 255, 255),
+              // height: 40,
+              // minWidth: 140,
+              child: Text(
                 "NEW TASK",
                 style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w400,
+                  color: Colors.white,
                   fontStyle: FontStyle.normal,
+                ),
                 ),
               ),
             ),
           ),
-        ],
-      ),
-    );
-  }
+        ),
+      ],
+    ),
+  );
 }
-
+}
 
            
 
