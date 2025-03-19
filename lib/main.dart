@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 // import 'Data/database_helper.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:sqflite_common_ffi_web/sqflite_ffi_web.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 // import 'dart:io';
 import 'home_page.dart'; // Import the new home.dart file
 
@@ -19,7 +20,14 @@ void main() async {
   // final dbHelper = DatabaseHelper();
   // await dbHelper.database;
 
-  databaseFactory = databaseFactoryFfiWeb;
+
+  if (kIsWeb) {
+  // running on the web!
+    databaseFactory = databaseFactoryFfiWeb;
+} else {
+  // NOT running on the web! You can check for additional platforms here.
+    databaseFactory = databaseFactoryFfi;
+}
  
   runApp(const MyApp());}
   catch (e) {

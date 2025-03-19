@@ -6,6 +6,7 @@ class Task {
   int? notifyHours; // Nullable, for hour-based reminders
   int? notifyDays;  // Nullable, for day-based reminders
   String? notifyDate; // Nullable, for specific date reminders
+  List<String> completedDates = []; // Store multiple completion dates
 
   Task({
     this.id,
@@ -14,6 +15,7 @@ class Task {
     this.notifyHours,
     this.notifyDays,
     this.notifyDate,
+    this.completedDates = const [],
   });
 
   // Convert Task to Map for SQLite

@@ -25,7 +25,7 @@ class DatabaseHelper {
 
       return await openDatabase(
         path,
-        version: 1,
+        version: 2, //Changing version to force migration
         onCreate: (db, version) async {
           await db.execute('''
             CREATE TABLE tasks (
@@ -37,10 +37,32 @@ class DatabaseHelper {
               notify_date TEXT
             )
           ''');
-          print("Database created successfully"); // Log database creation
-        },
-      );
-    } catch (e) {
+
+          db.execute('''
+        CREATE TABLE task_completion (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          task_id INTEGER NOT NULL,
+          completed_date TEXT NOT NULL,
+          FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE
+        )
+      ''');
+      print("Database creation successfult");
+    },
+    onUpgrade: (db, oldVersion, newVersion) {
+      if (oldVersion < 2) {
+        db.execute('''
+          CREATE TABLE task_completion (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            task_id INTEGER NOT NULL,
+            completed_date TEXT NOT NULL,
+            FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE
+          )
+        ''');
+      }
+    },
+  );
+}
+        catch (e) {
       print("Database initialization error: $e");
       rethrow;
     }
@@ -92,4 +114,54 @@ class DatabaseHelper {
       rethrow;
     }
   }
+
+// HANDLING TASK COMPLETION DATES
+
+//mark a task done
+Future<void> markTaskDone(int taskId, String date) async {
+  try{
+  final db = await database;
+  await db.insert(
+    'task_completion',
+    {'task_id': taskId, 'completed_date': date},
+    conflictAlgorithm: ConflictAlgorithm.ignore, // Prevent duplicates
+  );
+  } catch (e) {
+    print("Error marking a task as done: $e");
+  }
+}
+
+// Remove a completion date
+Future<void> unmarkTaskDone(int taskId, String date) async {
+  try{
+  final db = await database;
+  await db.delete(
+    'task_completion',
+    where: 'task_id = ? AND completed_date = ?',
+    whereArgs: [taskId, date],
+  );
+  } catch (e) {
+    print("Error unmarking or making a task NOT DONE: $e");
+  }
+}
+
+// Get completion dates for a task
+Future<List<String>> getTaskCompletionDates(int taskId) async {
+  try{
+  final db = await database;
+  final List<Map<String, dynamic>> results = await db.query(
+    'task_completion',
+    where: 'task_id = ?',
+    whereArgs: [taskId],
+  );
+  return results.map((row) => row['completed_date'].toString()).toList();
+  } catch (e) {
+    print("Error getting a task's completion dates: $e");
+    return [];
+  }
+}
+
+
+
+
 }

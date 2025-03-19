@@ -1,48 +1,50 @@
 import 'package:flutter/material.dart';
+import 'package:table_calendar/table_calendar.dart';
 import 'tasks_list.dart';
 import 'date_view.dart';
+import 'Data/database_helper.dart';
 
 class MyHomePage extends StatefulWidget {
   const MyHomePage({super.key});
-
-
 
   @override
   State<MyHomePage> createState() => _MyHomePageState();
 }
 
-
 class _MyHomePageState extends State<MyHomePage> {
-  // int _counter = 0;
+  final dbHelper = DatabaseHelper();
+  Set<DateTime> _completedTaskDates = {};
+  DateTime _focusedDay = DateTime.now();
 
-  // void _incrementCounter() {
-  //   setState(() {
-  //     _counter++;
-  //   });
-  // }
+  @override
+  void initState() {
+    super.initState();
+    _loadCompletedDates();
+  }
+
+  // Normalize date (remove time component)
+  DateTime _stripTime(DateTime date) {
+    return DateTime(date.year, date.month, date.day);
+  }
+
+  Future<void> _loadCompletedDates() async {
+    final db = await dbHelper.database;
+    final List<Map<String, dynamic>> results = await db.query('task_completion');
+
+    setState(() {
+      _completedTaskDates = results
+          .map((row) => _stripTime(DateTime.parse(row['completed_date'])))
+          .toSet();
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        elevation: 4,
-        centerTitle: false,
-        automaticallyImplyLeading: false,
         backgroundColor: const Color(0xff3ae882),
-        shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.zero,
-        ),
-        title: const Text(
-          "When Did You Last...?",
-          style: TextStyle(
-            fontWeight: FontWeight.w400,
-            fontStyle: FontStyle.normal,
-            fontSize: 18, // Increased font size
-            color: Color(0xff000000),
-          ),
-        ),
-        actions:  [
-         // Icon(Icons.menu, color: Color(0xff212435), size: 24),
+        title: const Text("When Did You Last...?"),
+        actions: [
           PopupMenuButton<String>(
             icon: const Icon(Icons.menu, color: Color(0xff212435), size: 24),
             onSelected: (value) {
@@ -54,36 +56,79 @@ class _MyHomePageState extends State<MyHomePage> {
               }
             },
             itemBuilder: (context) => [
-             const PopupMenuItem(value: 'Task View', child: Text('Task View')),
+              const PopupMenuItem(value: 'Task View', child: Text('Task View')),
             ],
           ),
         ],
       ),
-      body: Align(
-        alignment: const Alignment(0.0, -0.3),
-        child: Container(
-          margin: const EdgeInsets.all(0),
-          padding: const EdgeInsets.all(0),
-          width: 300,
-          height: 300,
-          decoration: BoxDecoration(
-            color: const Color(0x1f000000),
-            shape: BoxShape.rectangle,
-            borderRadius: BorderRadius.zero,
-            border: Border.all(color: const Color(0x4d9e9e9e), width: 1),
-          ),
-          child: CalendarDatePicker(
-            initialDate: DateTime.now(),
-            firstDate: DateTime(DateTime.now().year),
-            lastDate: DateTime(2050),
-            onDateChanged: (date) {
-              Navigator.push(
-  context,
-  MaterialPageRoute(builder: (context) => DateView(selectedDate: date)),
-);
-            },
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
+
+        child: TableCalendar(
+  firstDay: DateTime.utc(2020, 1, 1), // Adjust the range as needed
+  lastDay: DateTime.now(),
+  focusedDay: _focusedDay,
+  calendarFormat: CalendarFormat.month,
+  selectedDayPredicate: (day) => _completedTaskDates.contains(_stripTime(day)),
+  onDaySelected: (selectedDay, focusedDay) async {
+    if (selectedDay.isAfter(DateTime.now())) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("You cannot select future dates.")),
+      );
+      return;
+    }
+
+    bool? shouldRefresh = await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => DateView(selectedDate: selectedDay)),
+    );
+
+    if (shouldRefresh == true) {
+      _loadCompletedDates(); // Refresh the calendar when returning
+    }
+  },
+  calendarStyle:const CalendarStyle(
+  selectedDecoration: BoxDecoration(
+    color: Colors.green, // Force green for selected dates
+    shape: BoxShape.circle,
+  ),
+  todayDecoration: BoxDecoration(
+    color: Colors.blue, // Keep today's date blue
+    shape: BoxShape.circle,
+  ),
+  defaultDecoration: BoxDecoration(
+    shape: BoxShape.circle,
+  ),
+  weekendDecoration: BoxDecoration(
+    shape: BoxShape.circle,
+  ),
+),
+
+
+
+  
+  calendarBuilders: CalendarBuilders(
+    defaultBuilder: (context, day, focusedDay) {
+      bool isCompleted = _completedTaskDates.contains(_stripTime(day));
+      return Container(
+        margin: const EdgeInsets.all(4),
+        decoration: BoxDecoration(
+          color: isCompleted ? Colors.green : Colors.transparent,
+          shape: BoxShape.circle,
+        ),
+        child: Center(
+          child: Text(
+            '${day.day}',
+            style: TextStyle(
+              color: isCompleted ? Colors.white : Colors.black,
+              fontWeight: FontWeight.bold,
+            ),
           ),
         ),
+      );
+    },
+  ),
+),
       ),
     );
   }
