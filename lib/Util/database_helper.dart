@@ -1,6 +1,10 @@
+import 'package:flutter/material.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 import 'package:when_did_you_last/Models/task.dart';
+import 'package:sqflite_common_ffi/sqflite_ffi.dart';
+import 'package:sqflite_common_ffi_web/sqflite_ffi_web.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 
 class DatabaseHelper {
   static final DatabaseHelper _instance = DatabaseHelper._internal();
@@ -17,11 +21,14 @@ class DatabaseHelper {
   }
 
   Future<Database> _initDatabase() async {
+
+    databaseFactory = kIsWeb ? databaseFactoryFfiWeb : databaseFactoryFfi; // ✅ Use correct factory
+
     try {
       final dbPath = await getDatabasesPath();
       final path = join(dbPath, 'tasks.db');
 
-      print("Database path: $path"); // Log the database path
+      debugPrint("Database path: $path"); // Log the database path
 
       return await openDatabase(
         path,
@@ -46,7 +53,7 @@ class DatabaseHelper {
           FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE
         )
       ''');
-      print("Database creation successfult");
+      debugPrint("Database creation successfult");
     },
     onUpgrade: (db, oldVersion, newVersion) {
       if (oldVersion < 2) {
@@ -63,7 +70,7 @@ class DatabaseHelper {
   );
 }
         catch (e) {
-      print("Database initialization error: $e");
+      debugPrint("Database initialization error: $e");
       rethrow;
     }
   }
@@ -75,7 +82,7 @@ class DatabaseHelper {
       return await db.insert('tasks', task.toMap(),
           conflictAlgorithm: ConflictAlgorithm.replace);
     } catch (e) {
-      print("Error inserting task: $e");
+      debugPrint("Error inserting task: $e");
       rethrow;
     }
   }
@@ -87,7 +94,7 @@ class DatabaseHelper {
       final List<Map<String, dynamic>> maps = await db.query('tasks');
       return maps.map((map) => Task.fromMap(map)).toList();
     } catch (e) {
-      print("Error retrieving tasks: $e");
+      debugPrint("Error retrieving tasks: $e");
       rethrow;
     }
   }
@@ -99,7 +106,7 @@ class DatabaseHelper {
       return await db.update('tasks', task.toMap(),
           where: 'id = ?', whereArgs: [task.id]);
     } catch (e) {
-      print("Error updating task: $e");
+      debugPrint("Error updating task: $e");
       rethrow;
     }
   }
@@ -110,7 +117,7 @@ class DatabaseHelper {
       final db = await database;
       return await db.delete('tasks', where: 'id = ?', whereArgs: [id]);
     } catch (e) {
-      print("Error deleting task: $e");
+      debugPrint("Error deleting task: $e");
       rethrow;
     }
   }
@@ -127,7 +134,7 @@ Future<void> markTaskDone(int taskId, String date) async {
     conflictAlgorithm: ConflictAlgorithm.ignore, // Prevent duplicates
   );
   } catch (e) {
-    print("Error marking a task as done: $e");
+    debugPrint("Error marking a task as done: $e");
   }
 }
 
@@ -141,7 +148,7 @@ Future<void> unmarkTaskDone(int taskId, String date) async {
     whereArgs: [taskId, date],
   );
   } catch (e) {
-    print("Error unmarking or making a task NOT DONE: $e");
+    debugPrint("Error unmarking or making a task NOT DONE: $e");
   }
 }
 
@@ -156,7 +163,7 @@ Future<List<String>> getTaskCompletionDates(int taskId) async {
   );
   return results.map((row) => row['completed_date'].toString()).toList();
   } catch (e) {
-    print("Error getting a task's completion dates: $e");
+    debugPrint("Error getting a task's completion dates: $e");
     return [];
   }
 }

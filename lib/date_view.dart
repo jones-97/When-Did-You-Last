@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
-import 'Data/database_helper.dart';
+import 'Util/database_helper.dart';
 import 'Models/task.dart';
+import 'package:intl/intl.dart';
 
 class DateView extends StatefulWidget {
   final DateTime selectedDate;
+  
 
-  const DateView({super.key, required this.selectedDate});
+  DateView({super.key, required this.selectedDate});
 
   @override
   _DateViewState createState() => _DateViewState();
@@ -13,6 +15,7 @@ class DateView extends StatefulWidget {
 
 class _DateViewState extends State<DateView> {
   final dbHelper = DatabaseHelper();
+  
   List<Task> _tasks = [];
   Map<int, bool> _taskCompletionStatus = {}; // Track task completion
 
@@ -21,6 +24,12 @@ class _DateViewState extends State<DateView> {
     super.initState();
     _loadTasks();
   }
+
+  // @override
+  // void dispose() {
+  //   Navigator.pop(context, true);
+  //   super.dispose();
+  // }
 
   Future<void> _loadTasks() async {
     final tasks = await dbHelper.getTasks();
@@ -45,13 +54,32 @@ class _DateViewState extends State<DateView> {
     _loadTasks();
 
     // Refresh home page to highlight completed dates
-    Navigator.pop(context, true);  // Return "true" to signal a refresh
+   // Navigator.pop(context, true);  // Return "true" to signal a refresh
   }
+
+  String viewingDate(DateTime date) {
+    String formattedDate = DateFormat('yyyy-MM-dd').format(date);
+
+    return formattedDate;
+  }
+  
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: Text("Tasks on ${widget.selectedDate.toLocal()}")),
+    return WillPopScope(
+      onWillPop: () async {
+        Navigator.pop(context, true);
+        return false;
+      },
+      child: Scaffold(
+      appBar: AppBar(title: Text("Tasks on ${viewingDate(widget.selectedDate)}"),
+      leading: IconButton(
+            icon: const Icon(Icons.arrow_back),
+            onPressed: () {
+              Navigator.pop(context, true);
+            },
+            ),
+      ),
       body: Column(
         children: [
           Padding(
@@ -65,7 +93,7 @@ class _DateViewState extends State<DateView> {
               }).toList(),
               onChanged: (value) {},
               isExpanded: true,
-              hint: Text("Select a task"),
+              hint: _tasks.isEmpty == true ? const Text("Empty; Add new tasks") : const Text("Select a task"),
             ),
           ),
           Expanded(
@@ -85,6 +113,7 @@ class _DateViewState extends State<DateView> {
           ),
         ],
       ),
+      )
     );
   }
 }

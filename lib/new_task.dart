@@ -2,8 +2,22 @@
 library;
 
 import 'package:flutter/material.dart';
-import 'Data/database_helper.dart';
+import 'Util/database_helper.dart';
 import 'Models/task.dart';
+import 'notifications_helper.dart';
+
+/*
+void _saveTask() async {
+  if (_selectedDate != null) {
+    await NotificationHelper.scheduleNotification(
+      0,
+      "Task Reminder",
+      "Don't forget: $_taskName",
+      _selectedDate!,
+    );
+  }
+}
+*/
 
 class NewTask extends StatefulWidget {
   @override
@@ -39,11 +53,23 @@ Future<void> _pickDate(BuildContext context) async {
 }
 
 void _saveTask() async {
+
+//CHECK HERE FOR THE TASK
+  NotificationHelper.scheduleNotification(
+  1, // Unique ID for the notification
+  'Task Reminder', // Title
+  'Don\'t forget to complete your task!', // Body
+  DateTime.now().add(const Duration(seconds: 10)), // Schedule 10 seconds from now
+);
+
+
    if (_nameController.text.isEmpty) {
       ScaffoldMessenger.of(context)
           .showSnackBar(const SnackBar(content: Text("Task name is required!"))
           );
       return;
+
+      
     }
 
 

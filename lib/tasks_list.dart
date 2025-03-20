@@ -6,8 +6,10 @@ import 'dart:developer';
 import 'package:flutter/material.dart';
 import 'package:when_did_you_last/home_page.dart';
 import 'package:when_did_you_last/new_task.dart';
-import 'Data/database_helper.dart';
+import 'Util/database_helper.dart';
 import 'Models/task.dart';
+import 'settings.dart';
+import 'edit_task.dart';
 
 
 
@@ -67,9 +69,16 @@ class _TasksListState extends State<TasksList> {
                   MaterialPageRoute(builder: (context) => MyHomePage()),
                 );
               }
+              if (value == 'Settings') {
+                  Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => Settings()),
+                );
+              }
             },
             itemBuilder: (context) => [
               const PopupMenuItem(value: 'Home View', child: Text('Home View')),
+              const PopupMenuItem(value: 'Settings', child: Text('Settings'))
             ],
           ),
         ],
@@ -110,7 +119,21 @@ class _TasksListState extends State<TasksList> {
                                 ? "Repeats every ${task.notifyDays} days"
                                 : "No reminders",
                   ),
+                  onTap: () async {
+                   bool? updated = await Navigator.push(
+    context,
+    MaterialPageRoute(
+      builder: (context) => EditTask(currentTask: task),
+    ),
+  );
+
+  if (updated == true) {
+    _loadTasks(); // Refresh task list if changes were made
+  }
+                  
+               }
                 );
+                
               },
             ),
           ),

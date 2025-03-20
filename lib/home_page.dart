@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:table_calendar/table_calendar.dart';
 import 'tasks_list.dart';
+import 'settings.dart';
 import 'date_view.dart';
-import 'Data/database_helper.dart';
+// import 'main.dart';
+import 'Util/database_helper.dart';
 
 class MyHomePage extends StatefulWidget {
   const MyHomePage({super.key});
@@ -54,9 +56,16 @@ class _MyHomePageState extends State<MyHomePage> {
                   MaterialPageRoute(builder: (context) => TasksList()),
                 );
               }
+              if (value == 'Settings') {
+                  Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const Settings()),
+                );
+              }
             },
             itemBuilder: (context) => [
               const PopupMenuItem(value: 'Task View', child: Text('Task View')),
+              const PopupMenuItem(value: 'Settings', child: Text('Settings'))
             ],
           ),
         ],
