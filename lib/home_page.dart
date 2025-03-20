@@ -118,7 +118,10 @@ class _MyHomePageState extends State<MyHomePage> {
   
   calendarBuilders: CalendarBuilders(
     defaultBuilder: (context, day, focusedDay) {
+      bool isDarkMode = Theme.of(context).brightness == Brightness.dark;
       bool isCompleted = _completedTaskDates.contains(_stripTime(day));
+      bool isFutureDate = day.isAfter(DateTime.now());
+    
       return Container(
         margin: const EdgeInsets.all(4),
         decoration: BoxDecoration(
@@ -129,7 +132,10 @@ class _MyHomePageState extends State<MyHomePage> {
           child: Text(
             '${day.day}',
             style: TextStyle(
-              color: isCompleted ? Colors.white : Colors.black,
+              color: isFutureDate 
+                ? (isDarkMode ? Colors.black : Colors.grey)  // Future dates
+                : (isDarkMode ? Colors.white : Colors.black), // Accessible dates
+            
               fontWeight: FontWeight.bold,
             ),
           ),

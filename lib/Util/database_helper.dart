@@ -22,7 +22,7 @@ class DatabaseHelper {
 
   Future<Database> _initDatabase() async {
 
-    databaseFactory = kIsWeb ? databaseFactoryFfiWeb : databaseFactoryFfi; // ✅ Use correct factory
+  //  databaseFactory = kIsWeb ? databaseFactoryFfiWeb : databaseFactoryFfi; // ✅ Use correct factory
 
     try {
       final dbPath = await getDatabasesPath();
