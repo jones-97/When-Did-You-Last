@@ -25,6 +25,12 @@
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
         </activity>
+
+        <receiver 
+         android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationReceiver" 
+         android:exported="true"/>
+
+         
         <!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->
         <meta-data
@@ -37,7 +43,7 @@
 
          In particular, this is used by the Flutter engine in io.flutter.plugin.text.ProcessTextPlugin. -->
          <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
-         <receiver android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationReceiver" android:exported="true"/>
+         
          <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
          <uses-permission android:name="android.permission.VIBRATE"/>
          <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"/>

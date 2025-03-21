@@ -2,6 +2,7 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/data/latest_all.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
 import 'package:flutter/material.dart';
+import 'Models/task.dart';
 
 class NotificationHelper {
   static final FlutterLocalNotificationsPlugin _notificationsPlugin =
@@ -39,17 +40,49 @@ class NotificationHelper {
         importance: Importance.high,
         priority: Priority.high,
         playSound: true,
-        sound: RawResourceAndroidNotificationSound('notification_sound'), // Add a custom sound if needed
+        sound: RawResourceAndroidNotificationSound('notification_sound'), 
+          actions: <AndroidNotificationAction>[
+          AndroidNotificationAction('STOP', 'Stop/Pause', showsUserInterface: true),
+          AndroidNotificationAction('CONTINUE', 'Continue', showsUserInterface: true),
+        ],// Add a custom sound if needed
       ),
+      
       iOS: DarwinNotificationDetails(
         sound: 'default', // Use default sound for iOS
       ),
+      
     ),
     androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
      // Ensure exact timing
     payload: 'task_reminder', // Optional payload
   );
 }
+
+static Future<void> scheduleTaskNotification(Task task) async {
+  if (task.notifyDate != null) {
+    await scheduleNotification(
+      task.id!,
+      "Task Reminder",
+      "Don't forget: ${task.name}",
+      DateTime.parse(task.notifyDate!),
+    );
+  } else if (task.notifyHours != null) {
+    await scheduleNotification(
+      task.id!,
+      "Task Reminder",
+      "Don't forget: ${task.name}",
+      DateTime.now().add(Duration(hours: task.notifyHours!)),
+    );
+  } else if (task.notifyDays != null) {
+    await scheduleNotification(
+      task.id!,
+      "Task Reminder",
+      "Don't forget: ${task.name}",
+      DateTime.now().add(Duration(days: task.notifyDays!)),
+    );
+  }
+}
+
 
 static Future<void> requestNotificationPermissions(BuildContext context) async {
   if (Theme.of(context).platform == TargetPlatform.android) {
@@ -62,5 +95,10 @@ static Future<void> requestNotificationPermissions(BuildContext context) async {
     }
   }
 }
+
+static Future<void> cancelNotification(int id) async {
+  await _notificationsPlugin.cancel(id);
+}
+
 
 }

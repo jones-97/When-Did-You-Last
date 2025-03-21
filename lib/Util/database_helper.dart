@@ -23,6 +23,9 @@ class DatabaseHelper {
   Future<Database> _initDatabase() async {
 
   //  databaseFactory = kIsWeb ? databaseFactoryFfiWeb : databaseFactoryFfi; // ✅ Use correct factory
+  if (kIsWeb) {
+      databaseFactory = databaseFactoryFfiWeb; // ✅ Use IndexedDB for Web
+    }
 
     try {
       final dbPath = await getDatabasesPath();
@@ -32,18 +35,20 @@ class DatabaseHelper {
 
       return await openDatabase(
         path,
-        version: 2, //Changing version to force migration
+        version: 3, //Changing version to force migration
         onCreate: (db, version) async {
           await db.execute('''
-            CREATE TABLE tasks (
-              id INTEGER PRIMARY KEY AUTOINCREMENT,
-              name TEXT NOT NULL,
-              completed INTEGER DEFAULT 0,
-              notify_hours INTEGER,
-              notify_days INTEGER,
-              notify_date TEXT
-            )
-          ''');
+  CREATE TABLE IF NOT EXISTS tasks (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    completed INTEGER DEFAULT 0,
+    notify_hours INTEGER,
+    notify_days INTEGER,
+    notify_date TEXT,
+    notifications_paused INTEGER DEFAULT 0  -- ✅ New column (0 = active, 1 = paused)
+  )
+''');
+
 
           db.execute('''
         CREATE TABLE task_completion (
@@ -55,16 +60,11 @@ class DatabaseHelper {
       ''');
       debugPrint("Database creation successfult");
     },
-    onUpgrade: (db, oldVersion, newVersion) {
-      if (oldVersion < 2) {
-        db.execute('''
-          CREATE TABLE task_completion (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            task_id INTEGER NOT NULL,
-            completed_date TEXT NOT NULL,
-            FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE
-          )
-        ''');
+    onUpgrade: (db, oldVersion, newVersion) async {
+      if (oldVersion < 3) {
+            await db.execute("ALTER TABLE tasks ADD COLUMN notifications_paused INTEGER DEFAULT 0");
+        
+        
       }
     },
   );
@@ -167,6 +167,28 @@ Future<List<String>> getTaskCompletionDates(int taskId) async {
     return [];
   }
 }
+
+Future<void> updateTaskNotificationStatus(int taskId, int isPaused) async {
+  final db = await database;
+  await db.update(
+    'tasks',
+    {'notifications_paused': isPaused},
+    where: 'id = ?',
+    whereArgs: [taskId],
+  );
+}
+
+Future<Task?> getTaskById(int taskId) async {
+  final db = await database;
+  final List<Map<String, dynamic>> maps =
+      await db.query('tasks', where: 'id = ?', whereArgs: [taskId]);
+
+  if (maps.isNotEmpty) {
+    return Task.fromMap(maps.first);
+  }
+  return null;
+}
+
 
 
 

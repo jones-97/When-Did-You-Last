@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'Models/task.dart';
 import 'Util/database_helper.dart';
+import 'notifications_helper.dart';
 
 class EditTask extends StatefulWidget {
   final Task currentTask;
@@ -15,6 +16,8 @@ class _EditTaskState extends State<EditTask> {
   final TextEditingController _nameController = TextEditingController();
   TextEditingController _notifyController = TextEditingController();
   bool _enableAlert = false;
+  bool _notificationsPaused = false;
+
   int? _notifyHours;
   int? _notifyDays;
   DateTime? _selectedDate;
@@ -22,6 +25,7 @@ class _EditTaskState extends State<EditTask> {
   @override
   void initState() {
     super.initState();
+    _notificationsPaused = widget.currentTask.notificationsPaused == 1;
 
     // Initialize the form fields with the current task's properties
     _nameController.text = widget.currentTask.name;
@@ -74,37 +78,64 @@ class _EditTaskState extends State<EditTask> {
   }
 
   void _updateTask() async {
-
-    if (_nameController.text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Task name is required!")),
-      );
-      return;
-    }
-
-    final dbHelper = DatabaseHelper();
-
-    // Create an updated task object
-    final updatedTask = Task(
-      id: widget.currentTask.id, // Preserve the task ID
-      name: _nameController.text,
-      notifyHours: _enableAlert ? _notifyHours : null,
-      notifyDays: _enableAlert ? _notifyDays : null,
-      notifyDate: _enableAlert ? _selectedDate?.toIso8601String() : null,
+  if (_nameController.text.isEmpty) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text("Task name is required!")),
     );
-
-    try {
-      await dbHelper.updateTask(updatedTask); // Update the task in the database
-      Navigator.pop(context,
-          true); // Go back to the previous screen with a refresh signal
-    } catch (e) {
-      print("Error updating task: $e");
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Failed to update task!")),
-      );
-    }
-    
+    return;
   }
+
+  final dbHelper = DatabaseHelper();
+
+  final updatedTask = Task(
+    id: widget.currentTask.id, // Preserve the task ID
+    name: _nameController.text,
+    notifyHours: _enableAlert ? _notifyHours : null,
+    notifyDays: _enableAlert ? _notifyDays : null,
+    notifyDate: _enableAlert ? _selectedDate?.toIso8601String() : null,
+  );
+
+  try {
+    await dbHelper.updateTask(updatedTask);
+
+    // ✅ Cancel any existing notification for this task
+    await NotificationHelper.cancelNotification(widget.currentTask.id!);
+
+    // ✅ Only schedule a new notification if an alert is set
+    if (_enableAlert) {
+      if (_selectedDate != null) {
+        await NotificationHelper.scheduleNotification(
+          widget.currentTask.id!,
+          "Task Reminder",
+          "Don't forget: ${updatedTask.name}",
+          _selectedDate!,
+        );
+      } else if (_notifyHours != null) {
+        await NotificationHelper.scheduleNotification(
+          widget.currentTask.id!,
+          "Task Reminder",
+          "Don't forget: ${updatedTask.name}",
+          DateTime.now().add(Duration(hours: _notifyHours!)),
+        );
+      } else if (_notifyDays != null) {
+        await NotificationHelper.scheduleNotification(
+          widget.currentTask.id!,
+          "Task Reminder",
+          "Don't forget: ${updatedTask.name}",
+          DateTime.now().add(Duration(days: _notifyDays!)),
+        );
+      }
+    }
+
+    Navigator.pop(context, true); // Refresh task list after saving
+  } catch (e) {
+    debugPrint("Error updating task: $e");
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text("Failed to update task!")),
+    );
+  }
+}
+
 
   void _deleteTask() async {
     final dbHelper = DatabaseHelper();
@@ -115,12 +146,28 @@ class _EditTaskState extends State<EditTask> {
       Navigator.pop(context,
           true); // Go back to the previous screen with a refresh signal
     } catch (e) {
-      print("Error deleting task: $e");
+      debugPrint("Error deleting task: $e");
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Failed to delete task!")),
       );
     }
   }
+
+  void _toggleTaskNotifications(bool isPaused) async {
+  final dbHelper = DatabaseHelper();
+  await dbHelper.updateTaskNotificationStatus(widget.currentTask.id!, isPaused ? 1 : 0);
+
+  if (isPaused) {
+    await NotificationHelper.cancelNotification(widget.currentTask.id!);
+  } else {
+    NotificationHelper.scheduleTaskNotification(widget.currentTask); // Reschedule notification if re-enabled
+  }
+
+  setState(() {
+    _notificationsPaused = isPaused;
+  });
+}
+
 
   @override
   Widget build(BuildContext context) {
@@ -213,6 +260,15 @@ class _EditTaskState extends State<EditTask> {
                 isDense: false,
               ),
             ),
+            //MANAGE TASK NOTIFICATIONS BELOW:
+            SwitchListTile(
+  title: const Text("Disable Task Notifications"),
+  value: _notificationsPaused,
+  onChanged: (value) {
+    _toggleTaskNotifications(value);
+  },
+),
+
             SwitchListTile(
               title: const Text("Task Alert Status"),
               value: _enableAlert,

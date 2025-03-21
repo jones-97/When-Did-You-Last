@@ -96,9 +96,11 @@ class _SettingsState extends State<Settings> {
 
   @override
   Widget build(BuildContext context) {
-    final themeProvider = Provider.of<ThemeProvider>(context);
+  // final themeProvider = Provider.of<ThemeProvider>(context);
 
-    return Scaffold(
+     return Consumer<ThemeProvider>(
+    builder: (context, themeProvider, child) {
+      return Scaffold(
       appBar: AppBar(
         title: const Text("Settings"), 
         titleTextStyle: const TextStyle(color: Colors.white, fontStyle: FontStyle.italic),
@@ -150,10 +152,15 @@ class _SettingsState extends State<Settings> {
             value: _darkMode,
             onChanged: (value) {
               themeProvider.toggleTheme(value);
+              setState(() {}); //toggle refresh of this ui
             },
           ),
         ],
       ),
     );
+    }
+     );
+     
   }
+  
 }

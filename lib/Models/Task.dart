@@ -5,7 +5,8 @@ class Task {
   bool completed;
   int? notifyHours; // Nullable, for hour-based reminders
   int? notifyDays;  // Nullable, for day-based reminders
-  String? notifyDate; // Nullable, for specific date reminders
+  String? notifyDate;
+  int notificationsPaused; // Nullable, for specific date reminders
   List<String> completedDates = []; // Store multiple completion dates
 
   Task({
@@ -16,6 +17,7 @@ class Task {
     this.notifyDays,
     this.notifyDate,
     this.completedDates = const [],
+    this.notificationsPaused = 0
   });
 
   // Convert Task to Map for SQLite
@@ -27,6 +29,7 @@ class Task {
       'notify_hours': notifyHours,
       'notify_days': notifyDays,
       'notify_date': notifyDate,
+      'notifications_paused': notificationsPaused,
     };
   }
 
@@ -39,6 +42,7 @@ class Task {
       notifyHours: map['notify_hours'],
       notifyDays: map['notify_days'],
       notifyDate: map['notify_date'],
+      notificationsPaused: map['notifications_paused'] ?? 0,
     );
   }
 }

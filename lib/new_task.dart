@@ -53,49 +53,59 @@ Future<void> _pickDate(BuildContext context) async {
 }
 
 void _saveTask() async {
-
-//CHECK HERE FOR THE TASK
-  NotificationHelper.scheduleNotification(
-  1, // Unique ID for the notification
-  'Task Reminder', // Title
-  'Don\'t forget to complete your task!', // Body
-  DateTime.now().add(const Duration(seconds: 10)), // Schedule 10 seconds from now
-);
-
-
-   if (_nameController.text.isEmpty) {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text("Task name is required!"))
-          );
-      return;
-
-      
-    }
-
+  if (_nameController.text.isEmpty) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text("Task name is required!")),
+    );
+    return;
+  }
 
   final dbHelper = DatabaseHelper();
 
   final task = Task(
     name: _nameController.text,
-    notifyHours: _notifyHours,
-    notifyDays: _notifyDays, 
-    notifyDate: _selectedDate?.toIso8601String(),
+    notifyHours: _enableAlert ? _notifyHours : null,
+    notifyDays: _enableAlert ? _notifyDays : null,
+    notifyDate: _enableAlert ? _selectedDate?.toIso8601String() : null,
   );
 
   try {
- await dbHelper.insertTask(task);
-  Navigator.pop(context, true); // Go back to the previous screen
+    int taskId = await dbHelper.insertTask(task);
 
+    // ✅ Only schedule a notification if an alert is set
+    if (_enableAlert) {
+      if (_selectedDate != null) {
+        await NotificationHelper.scheduleNotification(
+          taskId, // Unique notification ID
+          "Task Reminder",
+          "Don't forget: ${task.name}",
+          _selectedDate!,
+        );
+      } else if (_notifyHours != null) {
+        await NotificationHelper.scheduleNotification(
+          taskId,
+          "Task Reminder",
+          "Don't forget: ${task.name}",
+          DateTime.now().add(Duration(hours: _notifyHours!)),
+        );
+      } else if (_notifyDays != null) {
+        await NotificationHelper.scheduleNotification(
+          taskId,
+          "Task Reminder",
+          "Don't forget: ${task.name}",
+          DateTime.now().add(Duration(days: _notifyDays!)),
+        );
+      }
+    }
+
+    Navigator.pop(context, true); // Refresh task list after saving
   } catch (e) {
-    print("Error saving task: $e");
+    debugPrint("Error saving task: $e");
     ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Failed to save task!")),
-      );
+      const SnackBar(content: Text("Failed to save task!")),
+    );
   }
-
- 
 }
-
 
 
   @override
