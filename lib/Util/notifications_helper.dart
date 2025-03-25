@@ -1,14 +1,25 @@
+import 'dart:typed_data';
+
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/data/latest_all.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/material.dart';
-import 'Models/task.dart';
+import '../Util/database_helper.dart';
+import '../Models/task.dart';
 
 class NotificationHelper {
+  
+  
   static final FlutterLocalNotificationsPlugin _notificationsPlugin =
       FlutterLocalNotificationsPlugin();
 
+
+
  static Future<void> init() async {
+  final prefs = await SharedPreferences.getInstance();
+  String? toneUri = prefs.getString('selectedRingtoneUri');
+
   tz.initializeTimeZones();
 
   const AndroidInitializationSettings androidInitSettings =
@@ -22,17 +33,56 @@ class NotificationHelper {
     iOS: iOSInitSettings,
   );
 
-  await _notificationsPlugin.initialize(initSettings);
+  await _notificationsPlugin.initialize(
+    initSettings,
+     onDidReceiveNotificationResponse: (NotificationResponse response) async {
+        if (response.actionId == 'STOP') {
+          debugPrint("Stop button pressed");
+          await markTaskAsDone(response.id!);
+        }
+
+        if (response.actionId == 'PAUSE') {
+          debugPrint("Pause button pressed");
+          await pauseTask(response.id!);
+
+        }
+      },
+    );
+  
+
+  // Create a notification channel for Android
+   AndroidNotificationChannel channel = AndroidNotificationChannel(
+    'task_channel_id', // Must match the channel ID in scheduleNotification
+    'Task Notifications', // Channel name
+    importance: Importance.high,
+    sound: toneUri != null ? UriAndroidNotificationSound(toneUri) : null,
+  );
+
+  await _notificationsPlugin
+      .resolvePlatformSpecificImplementation<
+          AndroidFlutterLocalNotificationsPlugin>()
+      ?.createNotificationChannel(channel);
 }
+
+
+
 
   static Future<void> scheduleNotification(
   int id, String title, String body, DateTime scheduledTime) async {
+    final prefs = await SharedPreferences.getInstance();  
+    
+    final String? ringtoneUri = prefs.getString('selectedRingtoneUri');
+     bool enableVibration = prefs.getBool('enableVibration') ?? true; // ✅ Default to true
+
+     debugPrint("Scheduling notification for: $scheduledTime");
+     debugPrint("Selected URI: $ringtoneUri");
+
   await _notificationsPlugin.zonedSchedule(
     id,
     title,
     body,
     tz.TZDateTime.from(scheduledTime, tz.local),
-    const NotificationDetails(
+     NotificationDetails(
       android: AndroidNotificationDetails(
         'task_channel_id', // Channel ID
         'Task Notifications', // Channel Name
@@ -40,19 +90,27 @@ class NotificationHelper {
         importance: Importance.high,
         priority: Priority.high,
         playSound: true,
-        sound: RawResourceAndroidNotificationSound('notification_sound'), 
+
+      /*  sound: ringtoneUri != null ? UriAndroidNotificationSound(ringtoneUri) // Use selected ringtone
+          : const RawResourceAndroidNotificationSound('default_sound'),
+            THIS IS ALREADY SPECIFIED ABOVE
+
+      */  enableVibration: enableVibration,
+        vibrationPattern: Int64List.fromList([0, 500, 1000, 500]),
+      //  sound: RawResourceAndroidNotificationSound('notification_sound'), 
           actions: <AndroidNotificationAction>[
-          AndroidNotificationAction('STOP', 'Stop/Pause', showsUserInterface: true),
-          AndroidNotificationAction('CONTINUE', 'Continue', showsUserInterface: true),
+          const AndroidNotificationAction('STOP', 'Stop', showsUserInterface: true, cancelNotification: true),
+          const AndroidNotificationAction('PAUSE', 'Pause', showsUserInterface: true, cancelNotification: true),
         ],// Add a custom sound if needed
       ),
       
-      iOS: DarwinNotificationDetails(
+      iOS: const DarwinNotificationDetails(
         sound: 'default', // Use default sound for iOS
       ),
       
     ),
     androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+    
      // Ensure exact timing
     payload: 'task_reminder', // Optional payload
   );
@@ -99,6 +157,24 @@ static Future<void> requestNotificationPermissions(BuildContext context) async {
 static Future<void> cancelNotification(int id) async {
   await _notificationsPlugin.cancel(id);
 }
+
+static Future<void> markTaskAsDone(int taskId) async {
+    final dbHelper = DatabaseHelper();
+    final today = DateTime.now();
+    final formattedDate = "${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}";
+
+    Task? task = await dbHelper.getTaskById(taskId);
+    if (task != null) {
+      await dbHelper.markTaskDone(taskId, formattedDate);
+      debugPrint("Task $taskId marked as done on $formattedDate");
+    }
+  }
+  
+  static pauseTask(int taskId) async {
+    final dbHelper = DatabaseHelper();
+   
+   await dbHelper.pauseTask(taskId);
+  }
 
 
 }

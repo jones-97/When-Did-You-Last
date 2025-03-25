@@ -124,6 +124,42 @@ class DatabaseHelper {
 
 // HANDLING TASK COMPLETION DATES
 
+//pause a task
+Future<void> pauseTask(int taskID) async {
+  try {
+      final db = await database;
+
+    await db.rawUpdate('''
+    UPDATE tasks 
+    SET notification_paused = 1,
+    WHERE _id = ?}
+    ''',
+    [taskID]);
+    } catch (e) {
+      debugPrint("Error pausing task: $e");
+      rethrow;
+    }
+}
+
+//pause a task
+Future<void> restartTask(int taskID) async {
+  //pause a task
+Future<void> pauseTask(int taskID) async {
+  try {
+      final db = await database;
+
+    await db.rawUpdate('''
+    UPDATE tasks 
+    SET notification_paused = 0,
+    WHERE _id = ?}
+    ''',
+    [taskID]);
+    } catch (e) {
+      debugPrint("Error resuming task: $e");
+      rethrow;
+    }
+}
+}
 //mark a task done
 Future<void> markTaskDone(int taskId, String date) async {
   try{

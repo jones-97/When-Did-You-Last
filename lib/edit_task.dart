@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'Models/task.dart';
 import 'Util/database_helper.dart';
-import 'notifications_helper.dart';
+import 'Util/notifications_helper.dart';
 
 class EditTask extends StatefulWidget {
   final Task currentTask;
@@ -21,6 +21,7 @@ class _EditTaskState extends State<EditTask> {
   int? _notifyHours;
   int? _notifyDays;
   DateTime? _selectedDate;
+  DateTime? _defaultTaskTime;
 
   @override
   void initState() {
@@ -86,13 +87,25 @@ class _EditTaskState extends State<EditTask> {
   }
 
   final dbHelper = DatabaseHelper();
+  DateTime? notifyDate = _selectedDate;
+
+  if (notifyDate != null && _defaultTaskTime != null) {
+    notifyDate = DateTime(
+      notifyDate.year,
+      notifyDate.month,
+      notifyDate.day,
+      _defaultTaskTime!.hour,
+      _defaultTaskTime!.minute,
+    );
+  }
 
   final updatedTask = Task(
     id: widget.currentTask.id, // Preserve the task ID
     name: _nameController.text,
     notifyHours: _enableAlert ? _notifyHours : null,
     notifyDays: _enableAlert ? _notifyDays : null,
-    notifyDate: _enableAlert ? _selectedDate?.toIso8601String() : null,
+    notifyDate: _enableAlert ? notifyDate?.toIso8601String() : null,
+    notificationsPaused: _notificationsPaused ? 1 : 0, 
   );
 
   try {
@@ -103,12 +116,12 @@ class _EditTaskState extends State<EditTask> {
 
     // ✅ Only schedule a new notification if an alert is set
     if (_enableAlert) {
-      if (_selectedDate != null) {
+      if (notifyDate != null) {
         await NotificationHelper.scheduleNotification(
           widget.currentTask.id!,
           "Task Reminder",
           "Don't forget: ${updatedTask.name}",
-          _selectedDate!,
+          notifyDate,
         );
       } else if (_notifyHours != null) {
         await NotificationHelper.scheduleNotification(
@@ -262,7 +275,7 @@ class _EditTaskState extends State<EditTask> {
             ),
             //MANAGE TASK NOTIFICATIONS BELOW:
             SwitchListTile(
-  title: const Text("Disable Task Notifications"),
+  title: const Text("Enable Task Notifications"),
   value: _notificationsPaused,
   onChanged: (value) {
     _toggleTaskNotifications(value);

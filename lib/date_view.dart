@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'Util/database_helper.dart';
 import 'Models/task.dart';
+import 'new_task.dart';
 import 'package:intl/intl.dart';
 
 class DateView extends StatefulWidget {
@@ -82,19 +83,12 @@ class _DateViewState extends State<DateView> {
       ),
       body: Column(
         children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(0, 10, 0, 0),
-            child: DropdownButton<String>(
-              items: _tasks.map((task) {
-                return DropdownMenuItem<String>(
-                  value: task.name,
-                  child: Text(task.name),
-                );
-              }).toList(),
-              onChanged: (value) {},
-              isExpanded: true,
-              hint: _tasks.isEmpty == true ? const Text("Empty; Add new tasks") : const Text("Select a task"),
-            ),
+          const Padding(
+            padding:  EdgeInsets.fromLTRB(0, 10, 0, 0),
+            child:  Text("Check a Task as Done today",
+            textAlign: TextAlign.center,
+            style: TextStyle(color: Color.fromARGB(1, 88, 166, 245)),)
+            
           ),
           Expanded(
             child: ListView.builder(
@@ -110,6 +104,22 @@ class _DateViewState extends State<DateView> {
                 );
               },
             ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(0, 10, 0, 0),
+            child: MaterialButton(
+               shape: const RoundedRectangleBorder(
+                borderRadius: BorderRadius.zero,
+                side: BorderSide(color: Color(0xff808080), width: 1),
+              ),
+            color: const Color(0xff3ae882),
+            child: const Text("New Task", style: TextStyle(color: Colors.white, fontWeight: FontWeight.w400)),
+            onPressed:  () => 
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) =>  NewTask()),
+          )
+          )
           ),
         ],
       ),

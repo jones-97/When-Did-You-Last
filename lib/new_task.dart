@@ -4,7 +4,8 @@ library;
 import 'package:flutter/material.dart';
 import 'Util/database_helper.dart';
 import 'Models/task.dart';
-import 'notifications_helper.dart';
+import 'Util/notifications_helper.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 /*
 void _saveTask() async {
@@ -26,13 +27,38 @@ class NewTask extends StatefulWidget {
 
 class _NewTaskState extends State<NewTask> {
 
+
+
 final TextEditingController _nameController = TextEditingController();
 bool _enableAlert = false;
 int? _notifyHours;
 int? _notifyDays;
+TimeOfDay? _defaultTaskTime;
+
 // final TextEditingController _hoursController = TextEditingController();
 // final TextEditingController _daysController = TextEditingController();
 DateTime? _selectedDate;
+
+@override
+void initState() {
+  super.initState();
+  _loadDefaultTime();
+}
+
+
+Future<void> _loadDefaultTime() async {
+  final prefs = await SharedPreferences.getInstance();
+  if (prefs.containsKey('defaultTaskHour') && prefs.containsKey('defaultTaskMinute')) {
+    setState(() {
+      _defaultTaskTime = TimeOfDay(
+        hour: prefs.getInt('defaultTaskHour') ?? 8,
+        minute: prefs.getInt('defaultTaskMinute') ?? 0,
+      );
+    });
+  }
+}
+  
+
 
 Future<void> _pickDate(BuildContext context) async {
   final DateTime? picked = await showDatePicker(
@@ -62,11 +88,24 @@ void _saveTask() async {
 
   final dbHelper = DatabaseHelper();
 
+  DateTime? notifyDate = _selectedDate;
+  
+  if (notifyDate != null && _defaultTaskTime != null) {
+    notifyDate = DateTime(
+      notifyDate.year,
+      notifyDate.month,
+      notifyDate.day,
+      _defaultTaskTime!.hour,
+      _defaultTaskTime!.minute,
+    );
+  }
+
   final task = Task(
     name: _nameController.text,
     notifyHours: _enableAlert ? _notifyHours : null,
     notifyDays: _enableAlert ? _notifyDays : null,
-    notifyDate: _enableAlert ? _selectedDate?.toIso8601String() : null,
+    notifyDate: _enableAlert ? notifyDate?.toIso8601String() : null,
+    notificationsPaused: _enableAlert ? 0 : 1,
   );
 
   try {
@@ -74,12 +113,13 @@ void _saveTask() async {
 
     // ✅ Only schedule a notification if an alert is set
     if (_enableAlert) {
-      if (_selectedDate != null) {
+      if (notifyDate != null) {
+        
         await NotificationHelper.scheduleNotification(
           taskId, // Unique notification ID
           "Task Reminder",
           "Don't forget: ${task.name}",
-          _selectedDate!,
+          notifyDate,
         );
       } else if (_notifyHours != null) {
         await NotificationHelper.scheduleNotification(
@@ -98,7 +138,8 @@ void _saveTask() async {
       }
     }
 
-    Navigator.pop(context, true); // Refresh task list after saving
+    Navigator.pop(context, true);
+     // Refresh task list after saving
   } catch (e) {
     debugPrint("Error saving task: $e");
     ScaffoldMessenger.of(context).showSnackBar(
@@ -114,13 +155,8 @@ void _saveTask() async {
       backgroundColor: const Color(0xffffffff),
       
       appBar: AppBar(
-        elevation: 4,
-        centerTitle: false,
-        automaticallyImplyLeading: false,
+        
         backgroundColor: const Color(0xffe8d63a),
-        shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.zero,
-        ),
         title: const Text(
           "New Task",
           style: TextStyle(
@@ -130,15 +166,13 @@ void _saveTask() async {
             color: Color(0xff000000),
           ),
         ),
-        leading: const Icon(
-          Icons.arrow_back,
-          color: Color(0xff212435),
-          size: 24,
-        ),
+        
+        
       ),
      
       body: //MAIN BODY
-      Padding(
+      SingleChildScrollView(
+        child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -199,6 +233,7 @@ void _saveTask() async {
                onChanged: (value) {
                 setState(() {
                   _enableAlert= !_enableAlert;
+                  _checkNotificationStatus();
 
                   if (!value) {
                     _notifyHours = null;
@@ -275,13 +310,14 @@ void _saveTask() async {
             padding: const EdgeInsets.fromLTRB(0, 10, 0, 0),
             child: MaterialButton(
               onPressed: _saveTask,
-              color: const Color(0xffffffff),
+              color: const Color(0xffe8d63a),
               elevation: 0,
               shape: const RoundedRectangleBorder(
                 borderRadius: BorderRadius.zero,
                 side: BorderSide(color: Color(0xff808080), width: 1),
               ),
               padding: const EdgeInsets.all(16),
+              
               textColor: const Color(0xff000000),
               height: 40,
               minWidth: 140,
@@ -298,7 +334,12 @@ void _saveTask() async {
           ]
       )
       ),
+      )
     );
+  }
+  
+  void _checkNotificationStatus() async {
+    await NotificationHelper.requestNotificationPermissions(context);
   }
 }
 

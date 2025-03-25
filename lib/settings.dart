@@ -1,15 +1,18 @@
 import 'package:flutter/material.dart';
-import 'main.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:flutter_ringtone_manager/flutter_ringtone_manager.dart';
-// import 'package:ringtone_picker/ringtone_picker.dart';
 import 'package:flutter_system_ringtones/flutter_system_ringtones.dart';
+import 'package:android_intent_plus/android_intent.dart';
+import 'package:android_intent_plus/flag.dart';
+
 import 'package:provider/provider.dart';
 import 'Util/theme_provider.dart';
+import 'Util/ringtone_picker.dart';
+
+// Add these keys for SharedPreferences
+const String _selectedRingtoneUriKey = 'selectedRingtoneUri';
+const String _selectedRingtoneTitleKey = 'selectedRingtoneTitle';
 
 class Settings extends StatefulWidget {
-  //final Function(bool) onThemeChanged;
-
   const Settings({super.key});
 
   @override
@@ -17,44 +20,47 @@ class Settings extends StatefulWidget {
 }
 
 class _SettingsState extends State<Settings> {
-
   TimeOfDay? _defaultTaskTime;
-  String? _selectedRingtone;
+  List<Ringtone> _ringtones = [];
+  String? _selectedRingtoneUri;
+  String? _selectedRingtoneTitle;
   bool _enableVibration = true;
   bool _autoCompleteTasks = false;
-  bool _darkMode = false;
-
-  final flutterRingtoneManager = FlutterRingtoneManager();
-
 
   @override
   void initState() {
     super.initState();
-    initPlatformState();
     _loadSettings();
-  }
-
-    Future<void> initPlatformState() async {
-    // If the widget was removed from the tree while the asynchronous platform
-    // message was in flight, we want to discard the reply rather than calling
-    // setState to update our non-existent appearance.
-    if (!mounted) return;
+    _loadRingtones();
   }
 
   Future<void> _loadSettings() async {
-    prefs = await SharedPreferences.getInstance();
+    final prefs = await SharedPreferences.getInstance();
     setState(() {
-      _defaultTaskTime = prefs.containsKey('defaultTaskTime')
-          ? TimeOfDay(
-              hour: prefs.getInt('defaultTaskHour') ?? 8,
-              minute: prefs.getInt('defaultTaskMinute') ?? 0)
-          : null;
-      _selectedRingtone = prefs.getString('selectedRingtone') ?? "Default";
+      if (prefs.containsKey('defaultTaskHour') &&
+          prefs.containsKey('defaultTaskMinute')) {
+        _defaultTaskTime = TimeOfDay(
+          hour: prefs.getInt('defaultTaskHour') ?? 8,
+          minute: prefs.getInt('defaultTaskMinute') ?? 0,
+        );
+      }
+
+      
       _enableVibration = prefs.getBool('enableVibration') ?? true;
       _autoCompleteTasks = prefs.getBool('autoCompleteTasks') ?? false;
-      _darkMode = prefs.getBool('darkMode') ?? false;
+
+      // Load both URI and title
+      _selectedRingtoneUri = prefs.getString(_selectedRingtoneUriKey);
+      _selectedRingtoneTitle = prefs.getString(_selectedRingtoneTitleKey) ?? "Default";
     });
   }
+
+  Future<void> _loadRingtones() async {
+  List<Ringtone> ringtones = await FlutterSystemRingtones.getRingtoneSounds();
+  setState(() {
+    _ringtones = ringtones;
+  });
+}
 
   Future<void> _saveSetting(String key, dynamic value) async {
     final prefs = await SharedPreferences.getInstance();
@@ -72,60 +78,111 @@ class _SettingsState extends State<Settings> {
       context: context,
       initialTime: _defaultTaskTime ?? const TimeOfDay(hour: 8, minute: 0),
     );
+
     if (pickedTime != null) {
       setState(() {
         _defaultTaskTime = pickedTime;
-        _saveSetting('defaultTaskHour', pickedTime.hour);
-        _saveSetting('defaultTaskMinute', pickedTime.minute);
       });
+
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setInt('defaultTaskHour', pickedTime.hour);
+      await prefs.setInt('defaultTaskMinute', pickedTime.minute);
     }
   }
 
+  Future<void> _toggleVibration(bool value) async {
+  final prefs = await SharedPreferences.getInstance();
+  await prefs.setBool('enableVibration', value);
+  setState(() {
+    _enableVibration = value;
+  });
+}
+
   Future<void> _pickRingtone() async {
-    await FlutterSystemRingtones.getRingtoneSounds();
+    final selectedRingtoneUri = await Navigator.push<String>(
+      context,
+      MaterialPageRoute(
+        builder: (context) =>
+            RingtonePickerScreen(selectedRingtoneUri: _selectedRingtoneUri),
+      ),
+    );
+
+    if (selectedRingtoneUri != null && selectedRingtoneUri.isNotEmpty) {
+      try {
+      final ringtone =
+          _ringtones.firstWhere((rt) => rt.uri == selectedRingtoneUri);
+      setState(() {
+          _selectedRingtoneUri = ringtone.uri;
+          _selectedRingtoneTitle = ringtone.title;
+      });
+      
+      
+              final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('selectedRingtoneUri', ringtone.uri);
+        await prefs.setString('selectedRingtoneTitle', ringtone.title);
+    } catch (e) {
+      debugPrint("Failed to select custom ringtone");
+      setState(() {
+        _selectedRingtoneTitle = "Custom Ringtone";
+      });
+      _saveSetting(_selectedRingtoneUriKey, selectedRingtoneUri);
+    }
+  }
   }
 
-  // Future<void> _toggleDarkMode(bool value) async {
-  //   widget.onThemeChanged(value); //Notify main.dart
-  //   setState(() {
-  //     _darkMode = value;
-  //     _saveSetting('darkMode', value);
-  //   });
+  void _openAndroidNotificationSettings() async {
+    const intent = AndroidIntent(
+      action: 'android.settings.CHANNEL_NOTIFICATION_SETTINGS',
+      flags: <int>[Flag.FLAG_ACTIVITY_NEW_TASK],
+     // package: 'com.example.when_did_you_last',
 
-  // }
+     arguments: <String, dynamic> {
+        'android.provider.extra.APP_PACKAGE': 'com.example.when_did_you_last', // ✅ Replace with your actual package name
+        'android.provider.extra.CHANNEL_ID': 'task_channel_id',
+      },
+      
+    );
+    await intent.launch();
+  }
+
 
   @override
   Widget build(BuildContext context) {
-  // final themeProvider = Provider.of<ThemeProvider>(context);
+    final themeProvider = Provider.of<ThemeProvider>(context);
 
-     return Consumer<ThemeProvider>(
-    builder: (context, themeProvider, child) {
-      return Scaffold(
+    return Scaffold(
       appBar: AppBar(
-        title: const Text("Settings"), 
-        titleTextStyle: const TextStyle(color: Colors.white, fontStyle: FontStyle.italic),
-        backgroundColor: Colors.black,
+        title: const Text("Settings"),
+        titleTextStyle:
+            const TextStyle(color: Colors.white, fontStyle: FontStyle.italic),
+        backgroundColor: Colors.purple,
       ),
       body: ListView(
         children: [
           ListTile(
             title: const Text("Default Task Time"),
             subtitle: Text(_defaultTaskTime != null
-                ? "${_defaultTaskTime!.format(context)}"
-                : "Not Set"),
+                ? _defaultTaskTime!
+                    .format(context) // ✅ Uses updated default time
+                : "Set default time for dated tasks"),
             trailing: const Icon(Icons.access_time),
             onTap: _pickDefaultTime,
           ),
+
           ListTile(
             title: const Text("Select Notification Ringtone"),
-            subtitle: Text(_selectedRingtone ?? "Default"),
+            subtitle: Text(_selectedRingtoneTitle ?? "Default"),
             trailing: const Icon(Icons.music_note),
-            onTap: () {
-              _pickRingtone();
-              //flutterRingtoneManager.playNotification();
-              // Placeholder for ringtone picker implementation
-            },
+            onTap: _pickRingtone,
           ),
+           ListTile(
+            title: const Text("Manage Notifications in System Settings"),
+            subtitle: const Text("Customize sound, priority, and behavior. Use this is above doesn't work"),
+            trailing: const Icon(Icons.settings),
+            onTap: _openAndroidNotificationSettings,
+          ),
+
+
           SwitchListTile(
             title: const Text("Enable Vibration"),
             value: _enableVibration,
@@ -149,18 +206,26 @@ class _SettingsState extends State<Settings> {
           ),
           SwitchListTile(
             title: const Text("Dark Mode"),
-            value: _darkMode,
+            value: themeProvider.isDarkMode,
             onChanged: (value) {
-              themeProvider.toggleTheme(value);
-              setState(() {}); //toggle refresh of this ui
+              themeProvider
+                  .toggleTheme(value); // Provider will handle the UI update
             },
           ),
+          ListTile(
+  title: const Text("Prevent App from Being Killed"),
+  subtitle: const Text("Allow this app to run in the background for notifications to work."),
+  trailing: const Icon(Icons.settings),
+  onTap: () async {
+    const intent =  AndroidIntent(
+      action: 'android.settings.IGNORE_BATTERY_OPTIMIZATION_SETTINGS',
+      flags: <int>[Flag.FLAG_ACTIVITY_NEW_TASK],
+    );
+    await intent.launch();
+  },
+),
         ],
       ),
     );
-    }
-     );
-     
   }
-  
 }

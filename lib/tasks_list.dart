@@ -1,17 +1,12 @@
-///File download from FlutterViz- Drag and drop a tools. For more details visit https://flutterviz.io/
-library;
-
 import 'dart:developer';
-
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:when_did_you_last/home_page.dart';
 import 'package:when_did_you_last/new_task.dart';
 import 'Util/database_helper.dart';
 import 'Models/task.dart';
 import 'settings.dart';
 import 'edit_task.dart';
-
-
 
 class TasksList extends StatefulWidget {
   @override
@@ -41,15 +36,34 @@ class _TasksListState extends State<TasksList> {
 
   @override
   Widget build(BuildContext context) {
+    final now = DateTime.now();
+    final todayStart = DateTime(now.year, now.month, now.day);
+    final twoDaysLaterStart = todayStart.add(Duration(days: 2));
+
+    List<Task> tasksDueToday = _tasks.where((task) {
+      if (task.notifyDate == null) return false;
+      final taskDate = DateTime.parse(task.notifyDate!);
+      return (taskDate.isAfter(todayStart) ||
+              taskDate.isAtSameMomentAs(todayStart)) &&
+          taskDate.isBefore(todayStart.add(Duration(days: 1)));
+    }).toList();
+
+    List<Task> tasksDueInTwoDays = _tasks.where((task) {
+      if (task.notifyDate == null) return false;
+      final taskDate = DateTime.parse(task.notifyDate!);
+      return (taskDate.isAfter(twoDaysLaterStart) ||
+              taskDate.isAtSameMomentAs(twoDaysLaterStart)) &&
+          taskDate.isBefore(twoDaysLaterStart.add(Duration(days: 1)));
+    }).toList();
+
+    List<Task> otherTasks = _tasks
+        .where((task) =>
+            task.notifyDate != now && task.notifyDate != twoDaysLaterStart)
+        .toList();
+
     return Scaffold(
       appBar: AppBar(
-        elevation: 4,
-        centerTitle: false,
-        automaticallyImplyLeading: false,
         backgroundColor: const Color(0xff947448),
-        shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.zero,
-        ),
         title: const Text(
           "Tasks View",
           style: TextStyle(
@@ -70,7 +84,7 @@ class _TasksListState extends State<TasksList> {
                 );
               }
               if (value == 'Settings') {
-                  Navigator.push(
+                Navigator.push(
                   context,
                   MaterialPageRoute(builder: (context) => Settings()),
                 );
@@ -83,190 +97,131 @@ class _TasksListState extends State<TasksList> {
           ),
         ],
       ),
-      body: Column(
-        children: [
-          //The List of Tasks
-          Expanded( // Wrap ListView.builder in Expanded
-            child: ListView.builder(
-              
-              itemCount: _tasks.isEmpty ? 1 : _tasks.length,
-              itemBuilder: (context, index) {
-                if (_tasks.isEmpty) {
-                return const ListTile(
-                  title: Center(
-                    child: Text(
-                      "Empty; Tasks will Appear Here",
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w500,
-                        color: Colors.grey,
-                      ),
-                    ),
-                  ),
-                );
-              }
-                final task = _tasks[index];
-                return ListTile(
-                  minTileHeight: 20.0,
-                  tileColor: const Color(0x1f000000),
-                  title: Text(task.name),
-                  subtitle: Text(
-                    task.notifyDate != null
-                        ? "Scheduled: ${task.notifyDate}"
-                        : task.notifyHours != null
-                            ? "Repeats every ${task.notifyHours} hours"
-                            : task.notifyDays != null
-                                ? "Repeats every ${task.notifyDays} days"
-                                : "No reminders",
-                  ),
-                  onTap: () async {
-                   bool? updated = await Navigator.push(
-    context,
-    MaterialPageRoute(
-      builder: (context) => EditTask(currentTask: task),
-    ),
-  );
+      body: SingleChildScrollView(
+          child: Column(
+            children: [
 
-  if (updated == true) {
-    _loadTasks(); // Refresh task list if changes were made
+          _buildSwipableTaskSection("Tasks Due Today", tasksDueToday),
+          _buildSwipableTaskSection("Tasks Due in Two Days", tasksDueInTwoDays),
+          const SizedBox(height: 20), // Adds spacing before task list
+          _buildTaskSection("Tasks List", otherTasks),
+            ]
+          )
+        
+      ),
+      floatingActionButton: FloatingActionButton(
+        backgroundColor: const Color(0xff3ae882),
+        onPressed: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => NewTask()),
+          ).then((_) => _loadTasks());
+        },
+        child: const Icon(Icons.add, color: Colors.white),
+      ),
+    );
+    
   }
-                  
-               }
-                );
-                
-              },
-            ),
-          ),
-          //Ensuring the button is always visible
 
-          Padding(
-            padding: const EdgeInsets.fromLTRB(0, 10, 0, 0),
-            child: SizedBox(
-              width: 200,
-              child: ElevatedButton(
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => NewTask()),
-                ).then((_) => _loadTasks());
-              },
-              style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xff3ae882),
-              elevation: 0,
-              shape: const RoundedRectangleBorder(
-                borderRadius: BorderRadius.zero,
-                side: BorderSide(color: Color(0xff808080), width: 1),
-              ),
-              ),
-              child: const Padding(
-              padding: EdgeInsets.all(16),
-              // textColor: const Color.fromARGB(255, 255, 255, 255),
-              // height: 40,
-              // minWidth: 140,
-              child: Text(
-                "NEW TASK",
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w400,
-                  color: Colors.white,
-                  fontStyle: FontStyle.normal,
-                ),
-                ),
-              ),
-            ),
+  Widget _buildSwipableTaskSection(String title, List<Task> tasks) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: Text(
+            title,
+            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
           ),
         ),
+        Expanded(
+          child: SizedBox(
+          height: 200,
+          child: tasks.isEmpty
+              ? const Center(child: Text("No tasks available."))
+              : ListView.builder(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: tasks.length,
+                  itemBuilder: (context, index) {
+                    return SizedBox(
+                      width: 250,
+                      child: Card(
+                        color: Colors.white,
+                        child: ListTile(
+                          title: Text(tasks[index].name),
+                          subtitle: Text("Due: ${tasks[index].notifyDate}"),
+                          onTap: () async {
+                            bool? updated = await Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) =>
+                                    EditTask(currentTask: tasks[index]),
+                              ),
+                            );
+                            if (updated == true) {
+                              _loadTasks();
+                            }
+                          },
+                        ),
+                      ),
+                    );
+                  },
+                ),
+        ),
+        )
       ],
-    ),
-  );
+    );
+  }
+
+  Widget _buildTaskSection(String title, List<Task> tasks) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: Text(
+            title,
+            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          ),
+        ),
+        if (tasks.isEmpty)
+          const Padding(
+            padding: EdgeInsets.all(8.0),
+            child: Text("No tasks available."),
+          )
+        else
+          Column(
+            children: tasks.map((task) => _buildTaskTile(task)).toList(),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildTaskTile(Task task) {
+    return ListTile(
+      tileColor: const Color(0x1f000000),
+      title: Text(task.name),
+      subtitle: Text(
+        task.notifyDate != null
+            ? "Scheduled: ${DateFormat('yyyy-MM-dd').format(DateTime.parse(task.notifyDate!))}"
+            : task.notifyHours != null
+                ? "Repeats every ${task.notifyHours} hours"
+                : task.notifyDays != null
+                    ? "Repeats every ${task.notifyDays} days"
+                    : "No reminders",
+      ),
+      onTap: () async {
+        bool? updated = await Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => EditTask(currentTask: task),
+          ),
+        );
+        if (updated == true) {
+          _loadTasks();
+        }
+      },
+    );
+    
+  }
 }
-}
-
-           
-
-            
-            
-      
-      
-      
-      
-      
-      
-      
-      
-      
-      
-      
-      
-//       ListView(
-//         scrollDirection: Axis.vertical,
-//         padding: const EdgeInsets.all(0),
-//         shrinkWrap: false,
-//         physics: const ScrollPhysics(),
-//         children: [
-
-//           const ListTile(
-//             tileColor: Color(0x1f000000),
-//             title: Text(
-//               "Task Name",
-//               style: TextStyle(
-//                 fontWeight: FontWeight.w400,
-//                 fontStyle: FontStyle.normal,
-//                 fontSize: 14,
-//                 color: Color(0xff000000),
-//               ),
-//               textAlign: TextAlign.start,
-//             ),
-//             subtitle: Text(
-//               "Repeats/Does Not Repeat",
-//               style: TextStyle(
-//                 fontWeight: FontWeight.w400,
-//                 fontStyle: FontStyle.normal,
-//                 fontSize: 14,
-//                 color: Color(0xff000000),
-//               ),
-//               textAlign: TextAlign.start,
-//             ),
-//             dense: false,
-//             contentPadding: EdgeInsets.symmetric(vertical: 0, horizontal: 16),
-//             selected: false,
-//             selectedTileColor: Color(0x42000000),
-//             shape: RoundedRectangleBorder(
-//               borderRadius: BorderRadius.zero,
-//               side: BorderSide(color: Color(0x4d9e9e9e), width: 1),
-//             ),
-//           ),
-
-
-//           Padding(
-//             padding: const EdgeInsets.fromLTRB(0, 10, 0, 0),
-//             child: MaterialButton(
-//               onPressed: () {
-//                 Navigator.push(
-//                   context,
-//                   MaterialPageRoute(builder: (context) => NewTask())
-//                 );
-//               },
-//               color: const Color(0xff3ae882),
-//               elevation: 0,
-//               shape: const RoundedRectangleBorder(
-//                 borderRadius: BorderRadius.zero,
-//                 side: BorderSide(color: Color(0xff808080), width: 1),
-//               ),
-//               padding: const EdgeInsets.all(16),
-              
-//               textColor: const Color.fromARGB(255, 255, 255, 255),
-               
-//               height: 40,
-//               minWidth: 140,
-//               child: const Text(
-//                 "NEW TASK",
-//                 style:  TextStyle(
-//                   fontSize: 14,
-//                   fontWeight: FontWeight.w400,
-//                   fontStyle: FontStyle.normal,
-//                 ),
-//               ),
-//             ),
-//           ),
-//       
