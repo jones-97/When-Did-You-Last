@@ -11,7 +11,7 @@ import 'package:device_info_plus/device_info_plus.dart';
 import 'package:android_intent_plus/android_intent.dart';
 import 'package:android_intent_plus/flag.dart';
 import 'package:workmanager/workmanager.dart';
-
+// import 'dart:io';
 // import 'package:when_did_you_last/settings.dart';
 import 'package:provider/provider.dart';
 import 'Models/task.dart';
@@ -26,6 +26,8 @@ import 'home_page.dart'; // Import the new home.dart file
 
 late SharedPreferences prefs;
 late var _notificationsPlugin;
+final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
+
 
 /* Future<void> requestNotificationPermissions(BuildContext context) async {
   if (Theme.of(context).platform == TargetPlatform.android) {
@@ -55,10 +57,10 @@ void handleNotificationResponse(String payload) async {
   int taskId = int.parse(parts[1]);
 
   if (parts[0] == "STOP") {
-    await DatabaseHelper().updateTaskNotificationStatus(taskId, 1); // Pause notifications
+    // await DatabaseHelper().updateTaskNotificationStatus(taskId, 1); // Pause notifications
     await NotificationHelper.cancelNotification(taskId);
   } else if (parts[0] == "CONTINUE") {
-    await DatabaseHelper().updateTaskNotificationStatus(taskId, 0); // Resume notifications
+  //   await DatabaseHelper().updateTaskNotificationStatus(taskId, 0); // Resume notifications
     Task? task = await DatabaseHelper().getTaskById(taskId);
     if (task != null) {
       await NotificationHelper.scheduleTaskNotification(task);
@@ -85,15 +87,23 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized(); // Ensures Flutter is fully initialized
   // prefs = await SharedPreferences.getInstance();
   //  bool isDarkMode = prefs.getBool('darkMode') ?? false;
-await Workmanager().initialize(callbackDispatcher);
+
+
+if (!kIsWeb) {
+  await Workmanager().initialize(callbackDispatcher);
+  await _requestNotificationPermission();
+  await _requestExactAlarmPermission();
+  _requestBatteryOptimization();
+}
   
-await _requestNotificationPermission();
+
+
   // Initialize the database before running the app
   // final dbHelper = DatabaseHelper();
   // await dbHelper.database;
 
   tz.initializeTimeZones();
-   _requestBatteryOptimization();
+   
 
   if (kIsWeb) {
   // running on the web!
@@ -124,7 +134,7 @@ Future<void> _requestBatteryOptimization() async {
   AndroidDeviceInfo androidInfo = await deviceInfo.androidInfo;
 
   if (androidInfo.version.sdkInt >= 23) {
-    final intent = AndroidIntent(
+    const intent = AndroidIntent(
       action: 'android.settings.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS',
       data: 'package:com.example.yourapp', // ✅ Replace with your app's package name
       flags: <int>[Flag.FLAG_ACTIVITY_NEW_TASK],
@@ -138,6 +148,51 @@ void callbackDispatcher() {
     // Keep background service alive
     return Future.value(true);
   });
+}
+
+
+Future<void> _requestExactAlarmPermission() async {
+  final prefs = await SharedPreferences.getInstance();
+  bool isAlarmPermissionGranted = prefs.getBool('alarmPermissionGranted') ?? false;
+
+  if (!isAlarmPermissionGranted && (await getAndroidSdkVersion()) >= 31) {
+    // ✅ Use navigatorKey to get context safely
+    if (navigatorKey.currentContext != null) {
+      showDialog(
+        context: navigatorKey.currentContext!,
+        builder: (context) {
+          return AlertDialog(
+            title: const Text("Enable Alarm Permissions"),
+            content: const Text("This app needs permission to schedule exact alarms. Please allow it in settings."),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context), // ✅ User can cancel
+                child: const Text("Cancel"),
+              ),
+              TextButton(
+                onPressed: () async {
+                  Navigator.pop(context);
+                  const intent = AndroidIntent(
+                    action: 'android.settings.REQUEST_SCHEDULE_EXACT_ALARM',
+                    flags: <int>[Flag.FLAG_ACTIVITY_NEW_TASK],
+                  );
+                  await intent.launch();
+                  await prefs.setBool('alarmPermissionGranted', true);
+                },
+                child: const Text("Proceed"),
+              ),
+            ],
+          );
+        },
+      );
+    }
+  }
+}
+
+
+Future<int> getAndroidSdkVersion() async {
+  final androidInfo = await DeviceInfoPlugin().androidInfo;
+  return androidInfo.version.sdkInt;
 }
 
 class MyApp extends StatelessWidget {
@@ -173,8 +228,10 @@ class _MyAppState extends State<MyApp> {
   @override
   Widget build(BuildContext context) {
     return Consumer<ThemeProvider>(
+     
       builder: (context, themeProvider, child) {
         return MaterialApp(
+           navigatorKey: navigatorKey,
       debugShowCheckedModeBanner: false,
       title: 'When Did You Last?',
       theme: ThemeData.light(), 

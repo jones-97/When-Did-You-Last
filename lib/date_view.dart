@@ -15,10 +15,12 @@ class DateView extends StatefulWidget {
 }
 
 class _DateViewState extends State<DateView> {
-  final dbHelper = DatabaseHelper();
-  
+  bool _loading = false;
+
+ final dbHelper = DatabaseHelper();
   List<Task> _tasks = [];
-  Map<int, bool> _taskCompletionStatus = {}; // Track task completion
+  Map<int, List<String>> _taskCompletionDates = {}; // Track completion dates per task
+  Map<int, bool> _taskCompletionStatus = {}; // Track task completion status
 
   @override
   void initState() {
@@ -26,36 +28,53 @@ class _DateViewState extends State<DateView> {
     _loadTasks();
   }
 
-  // @override
-  // void dispose() {
-  //   Navigator.pop(context, true);
-  //   super.dispose();
-  // }
-
   Future<void> _loadTasks() async {
+    
+
     final tasks = await dbHelper.getTasks();
-    for (var task in tasks) {
-      task.completedDates = await dbHelper.getTaskCompletionDates(task.id!);
+    final filteredTasks = tasks.where((task) {
+      return task.taskType == "No Alert/Tracker";
+    }).toList();
+
+    // Initialize completion dates for each task
+    final completionDatesMap = <int, List<String>>{};
+    for (var task in filteredTasks) {
+      completionDatesMap[task.id!] = await dbHelper.getTaskCompletionDates(task.id!);
     }
+
     setState(() {
-      _tasks = tasks;
+      _loading = true;
+      _tasks = filteredTasks;
+      _taskCompletionDates = completionDatesMap;
       _taskCompletionStatus = {
         for (var task in _tasks)
-          task.id!: task.completedDates.contains(widget.selectedDate.toIso8601String())
+          task.id!: _taskCompletionDates[task.id!]?.contains(
+                widget.selectedDate.toIso8601String(),
+              ) ??
+              false
       };
     });
   }
 
   Future<void> _toggleTaskCompletion(Task task, bool isDone) async {
-    if (isDone) {
-      await dbHelper.markTaskDone(task.id!, widget.selectedDate.toIso8601String());
-    } else {
-      await dbHelper.unmarkTaskDone(task.id!, widget.selectedDate.toIso8601String());
-    }
-    _loadTasks();
+    final dateString = widget.selectedDate.toIso8601String();
+    
+    setState(() {
+      _taskCompletionStatus[task.id!] = isDone;
+      if (isDone) {
+        _taskCompletionDates[task.id!] ??= [];
+        _taskCompletionDates[task.id!]!.add(dateString);
+      } else {
+        _taskCompletionDates[task.id!]?.remove(dateString);
+      }
+    });
 
-    // Refresh home page to highlight completed dates
-   // Navigator.pop(context, true);  // Return "true" to signal a refresh
+    // Update database
+    if (isDone) {
+      await dbHelper.markTaskDone(task.id!, dateString);
+    } else {
+      await dbHelper.unmarkTaskDone(task.id!, dateString);
+    }
   }
 
   String viewingDate(DateTime date) {
@@ -127,3 +146,5 @@ class _DateViewState extends State<DateView> {
     );
   }
 }
+
+

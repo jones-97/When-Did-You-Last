@@ -1,161 +1,227 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'Models/task.dart';
 import 'Util/database_helper.dart';
-import 'Util/notifications_helper.dart';
 
 class EditTask extends StatefulWidget {
-  final Task currentTask;
+  final Task task;
 
-  const EditTask({super.key, required this.currentTask});
+  const EditTask({required this.task});
 
   @override
   _EditTaskState createState() => _EditTaskState();
 }
 
-class _EditTaskState extends State<EditTask> {
-  final TextEditingController _nameController = TextEditingController();
-  TextEditingController _notifyController = TextEditingController();
-  bool _enableAlert = false;
-  bool _notificationsPaused = false;
 
-  int? _notifyHours;
-  int? _notifyDays;
+class _EditTaskState extends State<EditTask> {
+
+  final dbHelper = DatabaseHelper();
+
+  late TextEditingController _nameController;
+  late TextEditingController _detailsController;
+  late TextEditingController _hoursController;
+  late TextEditingController _daysController;
+  
+  String? _selectedTaskType = "No Alert/Tracker";
+  String? _selectedNotificationType;
+  bool _showDetails = false;
   DateTime? _selectedDate;
-  DateTime? _defaultTaskTime;
+  String? selectedDateString;
+  int? _notificationTime;
+  bool _notificationsPaused = false;
+  Duration? _timeOffset;
+
+ 
 
   @override
   void initState() {
     super.initState();
-    _notificationsPaused = widget.currentTask.notificationsPaused == 1;
+    _nameController = TextEditingController();
+    _detailsController = TextEditingController();
+    _hoursController = TextEditingController();
+    _daysController = TextEditingController();
 
-    // Initialize the form fields with the current task's properties
-    _nameController.text = widget.currentTask.name;
+  _nameController.text = widget.task.name;
+  _detailsController.text = widget.task.details ?? '';
 
-    // Check if the task has alerts enabled
-    _enableAlert = widget.currentTask.notifyHours != null ||
-        widget.currentTask.notifyDays != null ||
-        widget.currentTask.notifyDate != null;
 
-    _notifyHours = widget.currentTask.notifyHours;
-    _notifyDays = widget.currentTask.notifyDays;
-    _selectedDate = widget.currentTask.notifyDate != null
-        ? DateTime.parse(widget.currentTask.notifyDate!)
-        : null;
+    _initializeNotificationSettings();
+    
 
-    if (_notifyHours != null) {
-      _notifyController.text = _notifyHours.toString();
-    } else if (_notifyDays != null) {
-      _notifyController.text = _notifyDays.toString();
-    } else if (_selectedDate != null) {
-      _notifyController.text = _selectedDate.toString();
-    }
+  }
 
-    // Preselect the alert type if alerts are enabled
-    if (_enableAlert) {
-      if (widget.currentTask.notifyHours != null) {
-        _notifyHours = widget.currentTask.notifyHours;
-      } else if (widget.currentTask.notifyDays != null) {
-        _notifyDays = widget.currentTask.notifyDays;
-      } else if (widget.currentTask.notifyDate != null) {
-        _selectedDate = DateTime.parse(widget.currentTask.notifyDate!);
-      }
+
+  void _initializeNotificationSettings() {
+    // Set the radio button based on repeatType
+    _selectedNotificationType = widget.task.repeatType == 'none' 
+        ? null 
+        : widget.task.repeatType;
+      // "No Alert/Tracker";
+      //                 "One-Time";
+      //                 "Repetitive";
+    _selectedTaskType = widget.task.taskType == 'No Alert/Tracker' 
+        ? null 
+        : widget.task.taskType;
+
+        if (widget.task.details != null) {
+          _showDetails = true;
+        }
+
+
+  if (widget.task.customInterval != null) {
+    // For tasks with stored custom interval
+    if (widget.task.repeatType == 'days') {
+      _daysController.text = widget.task.customInterval.toString();
+    } 
+    else if (widget.task.repeatType == 'hours') {
+      _hoursController.text = widget.task.customInterval.toString();
     }
   }
 
-  Future<void> _pickDate(BuildContext context) async {
-    final DateTime? picked = await showDatePicker(
+  else if (widget.task.notificationTime != null) {
+    // Fallback for legacy tasks without custom_interval
+
+    final taskTime = DateTime.fromMillisecondsSinceEpoch(widget.task.notificationTime!);
+    
+    if (widget.task.repeatType == 'days') {
+      // Calculate approximate days (rounded to nearest whole number)
+      double days = (widget.task.notificationTime! - DateTime.now().millisecondsSinceEpoch) / 
+                   (1000 * 60 * 60 * 24);
+      _daysController.text = days.round().toString();
+    }
+    else if (widget.task.repeatType == 'hours') {
+      double hours = (widget.task.notificationTime! - DateTime.now().millisecondsSinceEpoch) / 
+                    (1000 * 60 * 60);
+      _hoursController.text = hours.round().toString();
+    }
+    else if (widget.task.repeatType == 'specific') {
+      _selectedDate = taskTime;
+      selectedDateString = DateFormat('MMM dd, yyyy - hh:mm a').format(taskTime);
+    }
+  }
+}
+/*
+    if (widget.task.notificationTime != null) {
+      final now = DateTime.now();
+      final taskTime = DateTime.fromMillisecondsSinceEpoch(widget.task.notificationTime!);
+      _timeOffset = taskTime.difference(now);
+
+      // Pre-fill values based on repeatType
+      switch (widget.task.repeatType) {
+        case 'hours':
+        _hoursController.text = widget.task.customInterval.toString();
+          break;
+        case 'days':
+          _daysController.text = widget.task.customInterval.toString();
+          break;
+        case 'specific':
+          _selectedDate = taskTime;
+          selectedDateString = DateFormat('MMM dd, yyyy - hh:mm a').format(taskTime);
+          break;
+      }
+    }
+  */
+
+  
+
+  Future<void> _pickDateTime(BuildContext context) async {
+    final DateTime? pickedDate = await showDatePicker(
       context: context,
       initialDate: _selectedDate ?? DateTime.now(),
       firstDate: DateTime.now(),
       lastDate: DateTime(2100),
     );
-    if (picked != null) {
-      setState(() {
-        _selectedDate = picked;
-        _notifyHours = null;
-        _notifyDays = null;
-      });
+    
+    if (pickedDate != null) {
+      final TimeOfDay? pickedTime = await showTimePicker(
+        context: context,
+        initialTime: _selectedDate != null 
+            ? TimeOfDay.fromDateTime(_selectedDate!)
+            : TimeOfDay.now(),
+      );
+      
+      if (pickedTime != null) {
+        setState(() {
+          _selectedDate = DateTime(
+            pickedDate.year,
+            pickedDate.month,
+            pickedDate.day,
+            pickedTime.hour,
+            pickedTime.minute,
+          );
+          selectedDateString = DateFormat('MMM dd, yyyy - hh:mm a').format(_selectedDate!);
+        });
+      }
     }
   }
 
-  void _updateTask() async {
-  if (_nameController.text.isEmpty) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text("Task name is required!")),
-    );
+  void calculateDateTime() {
+  if (_selectedDate != null) {
+    _notificationTime = _selectedDate!.millisecondsSinceEpoch;
     return;
   }
 
-  final dbHelper = DatabaseHelper();
-  DateTime? notifyDate = _selectedDate;
+  if (_selectedNotificationType == 'hours' && _hoursController.text.isNotEmpty) {
+    int hours = int.tryParse(_hoursController.text) ?? 0;
+    if (hours > 0) {
+      _notificationTime = DateTime.now().add(Duration(hours: hours)).millisecondsSinceEpoch;
+    }
+  } 
+  else if (_selectedNotificationType == 'days' && _daysController.text.isNotEmpty) {
+    int days = int.tryParse(_daysController.text) ?? 0;
+    if (days > 0) {
+      _notificationTime = DateTime.now().add(Duration(days: days)).millisecondsSinceEpoch;
+    }
+  }
+}
 
-  if (notifyDate != null && _defaultTaskTime != null) {
-    notifyDate = DateTime(
-      notifyDate.year,
-      notifyDate.month,
-      notifyDate.day,
-      _defaultTaskTime!.hour,
-      _defaultTaskTime!.minute,
-    );
+  Future<void> _updateTask() async {
+  try {
+    calculateDateTime();
+
+     // Determine custom_interval value
+  int? customInterval;
+  if (_selectedNotificationType == 'hours' && _hoursController.text.isNotEmpty) {
+    customInterval = int.tryParse(_hoursController.text);
+  } 
+  else if (_selectedNotificationType == 'days' && _daysController.text.isNotEmpty) {
+    customInterval = int.tryParse(_daysController.text);
   }
 
-  final updatedTask = Task(
-    id: widget.currentTask.id, // Preserve the task ID
-    name: _nameController.text,
-    notifyHours: _enableAlert ? _notifyHours : null,
-    notifyDays: _enableAlert ? _notifyDays : null,
-    notifyDate: _enableAlert ? notifyDate?.toIso8601String() : null,
-    notificationsPaused: _notificationsPaused ? 1 : 0, 
-  );
+    
+    final updatedTask = Task(
+      id: widget.task.id,
+      name: _nameController.text,
+      details: _showDetails ? _detailsController.text : null,
+      taskType: _selectedTaskType!,
+      repeatType: _selectedNotificationType ?? "none",
+      notificationTime: _notificationTime,
+      notificationsPaused: _notificationsPaused,
+      customInterval: customInterval, //stores original interval value eg 1 hour, 2 days
+    );
 
-  try {
-    await dbHelper.updateTask(updatedTask);
-
-    // ✅ Cancel any existing notification for this task
-    await NotificationHelper.cancelNotification(widget.currentTask.id!);
-
-    // ✅ Only schedule a new notification if an alert is set
-    if (_enableAlert) {
-      if (notifyDate != null) {
-        await NotificationHelper.scheduleNotification(
-          widget.currentTask.id!,
-          "Task Reminder",
-          "Don't forget: ${updatedTask.name}",
-          notifyDate,
-        );
-      } else if (_notifyHours != null) {
-        await NotificationHelper.scheduleNotification(
-          widget.currentTask.id!,
-          "Task Reminder",
-          "Don't forget: ${updatedTask.name}",
-          DateTime.now().add(Duration(hours: _notifyHours!)),
-        );
-      } else if (_notifyDays != null) {
-        await NotificationHelper.scheduleNotification(
-          widget.currentTask.id!,
-          "Task Reminder",
-          "Don't forget: ${updatedTask.name}",
-          DateTime.now().add(Duration(days: _notifyDays!)),
-        );
-      }
+    final result = await DatabaseHelper().updateTask(updatedTask);
+    if (result > 0) {
+      Navigator.pop(context, true);
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Failed to update task")),
+      );
     }
-
-    Navigator.pop(context, true); // Refresh task list after saving
   } catch (e) {
     debugPrint("Error updating task: $e");
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text("Failed to update task!")),
+      const SnackBar(content: Text("An error occurred while updating")),
     );
   }
 }
 
-
-  void _deleteTask() async {
+    void _deleteTask() async {
     final dbHelper = DatabaseHelper();
 
     try {
       await dbHelper.deleteTask(
-          widget.currentTask.id!); // Delete the task from the database
+          widget.task.id!); // Delete the task from the database
       Navigator.pop(context,
           true); // Go back to the previous screen with a refresh signal
     } catch (e) {
@@ -165,42 +231,13 @@ class _EditTaskState extends State<EditTask> {
       );
     }
   }
-
-  void _toggleTaskNotifications(bool isPaused) async {
-  final dbHelper = DatabaseHelper();
-  await dbHelper.updateTaskNotificationStatus(widget.currentTask.id!, isPaused ? 1 : 0);
-
-  if (isPaused) {
-    await NotificationHelper.cancelNotification(widget.currentTask.id!);
-  } else {
-    NotificationHelper.scheduleTaskNotification(widget.currentTask); // Reschedule notification if re-enabled
-  }
-
-  setState(() {
-    _notificationsPaused = isPaused;
-  });
-}
-
-
+  
+  
   @override
   Widget build(BuildContext context) {
-    // return WillPopScope(
-    //   onWillPop: () async {
-    //     Navigator.pop(context, true);
-    //     return false;
-    //   },
-    //   child:
-      
-      return Scaffold(
-      backgroundColor: const Color(0xffffffff),
+    return Scaffold(
       appBar: AppBar(
-        elevation: 4,
-        centerTitle: false,
-        automaticallyImplyLeading: false,
         backgroundColor: const Color(0xffe8d63a),
-        shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.zero,
-        ),
         title: const Text(
           "Edit Task",
           style: TextStyle(
@@ -208,173 +245,160 @@ class _EditTaskState extends State<EditTask> {
             fontStyle: FontStyle.normal,
             fontSize: 14,
             color: Color(0xff000000),
-          ),
-        ),
-        leading: IconButton(
-          icon: const Icon(
-            Icons.arrow_back,
-            color: Color(0xff212435),
-            size: 24,
-          ),
-          onPressed: () {
-            Navigator.pop(context, true); // Go back to the previous screen
-          },
         ),
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              "Task Name: ",
-              style: TextStyle(
-                fontWeight: FontWeight.w400,
-                fontStyle: FontStyle.normal,
-                fontSize: 14,
-                color: Color(0xff000000),
-              ),
-            ),
-            TextField(
-              controller: _nameController,
-              obscureText: false,
-              maxLines: 1,
-              style: const TextStyle(
-                fontWeight: FontWeight.w400,
-                fontStyle: FontStyle.normal,
-                fontSize: 14,
-                color: Color(0xff000000),
-              ),
-              decoration: InputDecoration(
-                disabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(4.0),
-                  borderSide:
-                      const BorderSide(color: Color(0xff000000), width: 1),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(4.0),
-                  borderSide:
-                      const BorderSide(color: Color(0xff000000), width: 1),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(4.0),
-                  borderSide:
-                      const BorderSide(color: Color(0xff000000), width: 1),
-                ),
-                hintText: "Enter Text",
-                hintStyle: const TextStyle(
+      ),
+      body: SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                "Task Name: ",
+                style: TextStyle(
                   fontWeight: FontWeight.w400,
                   fontStyle: FontStyle.normal,
                   fontSize: 14,
                   color: Color(0xff000000),
-                ),
-                filled: true,
-                fillColor: const Color(0xfff2f2f3),
-                isDense: false,
               ),
-            ),
-            //MANAGE TASK NOTIFICATIONS BELOW:
-            SwitchListTile(
-  title: const Text("Enable Task Notifications"),
-  value: _notificationsPaused,
-  onChanged: (value) {
-    _toggleTaskNotifications(value);
-  },
-),
+              ),
+              TextField(
+                controller: _nameController,
+                decoration: const InputDecoration(
+                  border: OutlineInputBorder(),
+                  hintText: "Enter task name",
+                ),
+              ),
+              Padding(
+                padding: EdgeInsets.all(16.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text("Task Type"),
+                    DropdownButton<String>(
+                      value: _selectedTaskType,
+                      onChanged: (newValue) {
+                        setState(() {
+                          _selectedTaskType = newValue!;
+                          _selectedNotificationType = null;
+                        });
+                      },
+                      items: [
+                        "No Alert/Tracker",
+                        "One-Time",
+                        "Repetitive",
+                      ].map((type) {
+                        return DropdownMenuItem(
+                          value: type,
+                          child: Text(type),
+                        );
+                      }).toList(),
+                    ),
 
-            SwitchListTile(
-              title: const Text("Task Alert Status"),
-              value: _enableAlert,
-              activeColor: const Color(0xff3a57e8),
-              activeTrackColor: const Color(0xff92c6ef),
-              inactiveThumbColor: const Color(0xff9e9e9e),
-              inactiveTrackColor: const Color(0xffe0e0e0),
-              onChanged: (value) {
-                setState(() {
-                  _enableAlert = value;
-                  if (!value) {
-                    _notifyHours = null;
-                    _notifyDays = null;
-                    _selectedDate = null;
-                  }
-                });
-              },
-            ),
-            if (_enableAlert) ...[
-              const Text("Choose One Alert Option",
-                  style: TextStyle(fontWeight: FontWeight.bold)),
-              ListTile(
-                title: const Text("Notify after hours"),
-                leading: Radio(
-                  value: 1,
-                  groupValue: _notifyHours != null
-                      ? 1
-                      : (_notifyDays != null
-                          ? 2
-                          : (_selectedDate != null ? 3 : null)),
-                  onChanged: (value) {
-                    setState(() {
-                      _notifyHours = 1; // Default value
-                      _notifyDays = null;
-                      _selectedDate = null;
-                    });
-                  },
-                ),
-              ),
-              if (_notifyHours != null)
-                TextField(
-                  controller: _notifyController,
-                  keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(labelText: "Enter hours"),
-                  onChanged: (value) {
-                    _notifyHours = int.tryParse(value);
-                  },
-                ),
-              ListTile(
-                title: const Text("Notify after days"),
-                leading: Radio(
-                  value: 2,
-                  groupValue: _notifyDays != null
-                      ? 2
-                      : (_notifyHours != null
-                          ? 1
-                          : (_selectedDate != null ? 3 : null)),
-                  onChanged: (value) {
-                    setState(() {
-                      _notifyHours = null;
-                      _notifyDays = 1; // Default value
-                      _selectedDate = null;
-                    });
-                  },
-                ),
-              ),
-              if (_notifyDays != null)
-                TextField(
-                  controller: _notifyController,
-                  keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(labelText: "Enter days"),
-                  onChanged: (value) {
-                    _notifyDays = int.tryParse(value);
-                  },
-                ),
-              ListTile(
-                title: const Text("Set specific date/time"),
-                leading: Radio(
-                  value: 3,
-                  groupValue: _selectedDate != null
-                      ? 3
-                      : (_notifyHours != null
-                          ? 1
-                          : (_notifyDays != null ? 2 : null)),
-                  onChanged: (value) {
-                    _pickDate(context);
-                  },
-                ),
-              ),
-              if (_selectedDate != null)
-                Text("Selected Date: ${_selectedDate.toString()}"),
-            ],
-            Padding(
+                    SizedBox(height: 16),
+
+                    if (_selectedTaskType == "One-Time" || _selectedTaskType == "Repetitive") ...[
+                      Text("Notification Type"),
+                      Column(
+                        children: [
+                          RadioListTile<String>(
+                            title: Text("Notify after hours"),
+                            value: "hours",
+                            groupValue: _selectedNotificationType,
+                            onChanged: (value) {
+                              setState(() {
+                                _selectedNotificationType = value;
+                              });
+                            },
+                          ),
+                          if (_selectedNotificationType == "hours") ...[
+                            TextField(
+                              controller: _hoursController,
+                              keyboardType: TextInputType.number,
+                              decoration: InputDecoration(labelText: "Enter hours"),
+                            ),
+                          ],
+                          RadioListTile<String>(
+                            title: Text("Notify after days"),
+                            value: "days",
+                            groupValue: _selectedNotificationType,
+                            onChanged: (value) {
+                              setState(() {
+                                _selectedNotificationType = value;
+                              });
+                            },
+                          ),
+                          if (_selectedNotificationType == "days") ...[
+                            TextField(
+                              controller: _daysController,
+                              keyboardType: TextInputType.number,
+                              decoration: InputDecoration(labelText: "Enter days"),
+                            ),
+                          ],
+                          if (_selectedTaskType == "One-Time")
+                            RadioListTile<String>(
+                              title: Text("Set specific date/time"),
+                              value: "specific",
+                              groupValue: _selectedNotificationType,
+                              onChanged: (value) {
+                                setState(() {
+                                  _selectedNotificationType = value;
+                                  _pickDateTime(context);
+                                });
+                              },
+                            ),
+                          if (_selectedNotificationType == "specific") ...[
+                            Text("Selected Date: ${selectedDateString ?? 'Not selected'}")
+                          ],
+                        ],
+                      ),
+                    ],
+
+                    SizedBox(height: 16),
+
+                    Row(
+                      children: [
+                        Checkbox(
+                          value: _showDetails,
+                          onChanged: (bool? newValue) {
+                            setState(() {
+                              _showDetails = newValue ?? false;
+                            });
+                          },
+                        ),
+                        Text("Provide more info?"),
+                      ],
+                    ),
+
+                    if (_showDetails) ...[
+                      Text("Details"),
+                      TextField(
+                        controller: _detailsController,
+                        maxLines: 3,
+                        decoration: InputDecoration(
+                          border: OutlineInputBorder(),
+                          hintText: "Enter task details",
+                        ),
+                      ),
+                    ],
+                  if (_selectedTaskType == "No Alert/Tracker") ... [
+                      SwitchListTile(
+                      title: Text("Pause Notifications?"),
+                      value: _notificationsPaused,
+                      onChanged: (value) {
+                        setState(() {
+                          _notificationsPaused = value;
+                        });
+                      },
+                    ),
+
+                  ],
+                  
+
+                    SizedBox(height: 20),
+
+                    Padding(
               padding: const EdgeInsets.fromLTRB(0, 10, 0, 0),
               child: MaterialButton(
                 onPressed: _updateTask,
@@ -422,11 +446,23 @@ class _EditTaskState extends State<EditTask> {
                 ),
               ),
             ),
-          ],
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
-      )
-      );
-    //   )
-    // );
+      ),
+    );
   }
-}
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _detailsController.dispose();
+    _hoursController.dispose();
+    _daysController.dispose();
+    super.dispose();
+  }
+  
+  }

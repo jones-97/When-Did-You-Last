@@ -33,7 +33,7 @@ class _MyHomePageState extends State<MyHomePage> {
 
   Future<void> _loadCompletedDates() async {
     final db = await dbHelper.database;
-    final List<Map<String, dynamic>> results = await db.query('task_completion');
+    final List<Map<String, dynamic>> results = await db.query('completed_tasks');
 
     setState(() {
       _completedTaskDates = results

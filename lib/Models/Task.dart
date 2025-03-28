@@ -1,48 +1,51 @@
-
 class Task {
   int? id;
   String name;
-  bool completed;
-  int? notifyHours; // Nullable, for hour-based reminders
-  int? notifyDays;  // Nullable, for day-based reminders
-  String? notifyDate;
-  int notificationsPaused; // Nullable, for specific date reminders
-  List<String> completedDates = []; // Store multiple completion dates
+  String? details;
+  String taskType; //no-alert/tracker, one-time, repetitive
+  String repeatType; //none, minute, hourly, daily, specified
+  int? intervalValue; //to store EXACT interval values for hourly and daily timed tasks; datetime.now reduces the duration
+  int? customInterval; // Nullable, for specifically-time reminders; future possible implementation
+  int? notificationTime;
+  bool notificationsPaused;
+  //   List<String> completedDates = []; // Store multiple completion dates
 
   Task({
     this.id,
     required this.name,
-    this.completed = false,
-    this.notifyHours,
-    this.notifyDays,
-    this.notifyDate,
-    this.completedDates = const [],
-    this.notificationsPaused = 0
+    this.details,
+    required this.taskType,
+    required this.repeatType,
+    this.customInterval,
+    this.notificationTime,
+    this.notificationsPaused = false,
   });
 
-  // Convert Task to Map for SQLite
+  // Convert a Task object to a Map (for saving to the database)
   Map<String, dynamic> toMap() {
     return {
       'id': id,
       'name': name,
-      'completed': completed ? 1 : 0,
-      'notify_hours': notifyHours,
-      'notify_days': notifyDays,
-      'notify_date': notifyDate,
-      'notifications_paused': notificationsPaused,
+      'details': details,
+      'task_type': taskType,
+      'repeat_type': repeatType,
+      'custom_interval': customInterval,
+      'notification_time': notificationTime,
+      'notifications_paused': notificationsPaused ? 1 : 0,
     };
   }
 
-  // Convert Map from SQLite to Task Object
+  // Convert a Map from the database into a Task object
   factory Task.fromMap(Map<String, dynamic> map) {
     return Task(
       id: map['id'],
       name: map['name'],
-      completed: map['completed'] == 1,
-      notifyHours: map['notify_hours'],
-      notifyDays: map['notify_days'],
-      notifyDate: map['notify_date'],
-      notificationsPaused: map['notifications_paused'] ?? 0,
+      details: map['details'],
+      taskType: map['task_type'],
+      repeatType: map['repeat_type'],
+      customInterval: map['custom_interval'],
+      notificationTime: map['notification_time'],
+      notificationsPaused: map['notifications_paused'] == 1,
     );
   }
 }

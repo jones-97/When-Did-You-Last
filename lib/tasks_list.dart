@@ -16,6 +16,9 @@ class TasksList extends StatefulWidget {
 class _TasksListState extends State<TasksList> {
   final dbHelper = DatabaseHelper();
   List<Task> _tasks = [];
+  List<Task> tasksDueToday = [];
+  List<Task> tasksDueInTwoDays = [];
+  List<Task> otherTasks = [];
 
   @override
   void initState() {
@@ -23,153 +26,138 @@ class _TasksListState extends State<TasksList> {
     _loadTasks();
   }
 
+/*
   Future<void> _loadTasks() async {
     try {
       final tasks = await dbHelper.getTasks();
+      
+      final now = DateTime.now();
+      final todayStart = DateTime(now.year, now.month, now.day);
+      final tomorrowStart = todayStart.add(const Duration(days: 1));
+      final twoDaysLaterStart = todayStart.add(const Duration(days: 2));
+
       setState(() {
         _tasks = tasks;
+        
+        tasksDueToday = _tasks.where((task) {
+          if (task.notificationTime == null) return false;
+
+          final taskDate = DateTime.fromMillisecondsSinceEpoch(task.notificationTime!);
+          return taskDate.isAfter(todayStart) && 
+                 taskDate.isBefore(todayStart.add(const Duration(days: 1)));
+        }).toList();
+
+        tasksDueInTwoDays = _tasks.where((task) {
+          if (task.notificationTime == null) return false;
+
+          final taskDate = DateTime.fromMillisecondsSinceEpoch(task.notificationTime!);
+          return taskDate.isAfter(twoDaysLaterStart) && 
+                 taskDate.isBefore(twoDaysLaterStart.add(const Duration(days: 1)));
+        }).toList();
+
+        otherTasks = _tasks.where((task) {
+          if (task.notificationTime == null) return true;
+          final taskDate = DateTime.fromMillisecondsSinceEpoch(task.notificationTime!);
+          return !taskDate.isAfter(todayStart) || 
+                 taskDate.isAfter(twoDaysLaterStart.add(const Duration(days: 1)));
+        }).toList();
       });
     } catch (e) {
       log("Error loading tasks: $e");
     }
   }
+*/
+    Future<void> _loadTasks() async {
+    try {
+      final tasks = await dbHelper.getTasks();
+      _categorizeTasks(tasks);
+    } catch (e) {
+      log("Error loading tasks: $e");
+    }
+  }
+
+  void _categorizeTasks(List<Task> tasks) {
+    final now = DateTime.now();
+    final todayEnd = DateTime(now.year, now.month, now.day).add(const Duration(days: 1));
+    final tomorrowEnd = todayEnd.add(const Duration(days: 1));
+
+    setState(() {
+      _tasks = tasks;
+      
+      tasksDueToday = _tasks.where((task) {
+        if (task.notificationTime == null) return false;
+        final taskDate = DateTime.fromMillisecondsSinceEpoch(task.notificationTime!);
+        return taskDate.isAfter(now) && taskDate.isBefore(todayEnd);
+      }).toList();
+
+      tasksDueInTwoDays = _tasks.where((task) {
+        if (task.notificationTime == null) return false;
+        final taskDate = DateTime.fromMillisecondsSinceEpoch(task.notificationTime!);
+        return taskDate.isAfter(todayEnd) && taskDate.isBefore(tomorrowEnd);
+      }).toList();
+
+      otherTasks = _tasks.where((task) {
+        if (task.notificationTime == null) return true;
+        final taskDate = DateTime.fromMillisecondsSinceEpoch(task.notificationTime!);
+        return taskDate.isAfter(tomorrowEnd) || taskDate.isBefore(now);
+      }).toList();
+    });
+  }
+
+  String _formatTaskTime(Task task) {
+    if (task.notificationTime == null) return "No due date";
+    final date = DateTime.fromMillisecondsSinceEpoch(task.notificationTime!);
+    return DateFormat('MMM dd, yyyy - hh:mm a').format(date);
+  }
+
+
 
   @override
   Widget build(BuildContext context) {
-    final now = DateTime.now();
-    final todayStart = DateTime(now.year, now.month, now.day);
-    final twoDaysLaterStart = todayStart.add(Duration(days: 2));
-
-    List<Task> tasksDueToday = _tasks.where((task) {
-      if (task.notifyDate == null) return false;
-      final taskDate = DateTime.parse(task.notifyDate!);
-      return (taskDate.isAfter(todayStart) ||
-              taskDate.isAtSameMomentAs(todayStart)) &&
-          taskDate.isBefore(todayStart.add(Duration(days: 1)));
-    }).toList();
-
-    List<Task> tasksDueInTwoDays = _tasks.where((task) {
-      if (task.notifyDate == null) return false;
-      final taskDate = DateTime.parse(task.notifyDate!);
-      return (taskDate.isAfter(twoDaysLaterStart) ||
-              taskDate.isAtSameMomentAs(twoDaysLaterStart)) &&
-          taskDate.isBefore(twoDaysLaterStart.add(Duration(days: 1)));
-    }).toList();
-
-    List<Task> otherTasks = _tasks
-        .where((task) =>
-            task.notifyDate != now && task.notifyDate != twoDaysLaterStart)
-        .toList();
-
     return Scaffold(
       appBar: AppBar(
         backgroundColor: const Color(0xff947448),
         title: const Text(
           "Tasks View",
-          style: TextStyle(
-            fontWeight: FontWeight.w400,
-            fontStyle: FontStyle.normal,
-            fontSize: 14,
-            color: Color(0xff000000),
-          ),
+          style: TextStyle(fontWeight: FontWeight.w400, fontSize: 14, color: Color(0xff000000)
+          )
         ),
         actions: [
           PopupMenuButton<String>(
             icon: const Icon(Icons.menu, color: Color(0xff212435), size: 24),
             onSelected: (value) {
               if (value == 'Home View') {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => MyHomePage()),
-                );
-              }
-              if (value == 'Settings') {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => Settings()),
-                );
+                Navigator.push(context, MaterialPageRoute(builder: (context) => MyHomePage()));
+              } else if (value == 'Settings') {
+                Navigator.push(context, MaterialPageRoute(builder: (context) => Settings()));
               }
             },
             itemBuilder: (context) => [
               const PopupMenuItem(value: 'Home View', child: Text('Home View')),
-              const PopupMenuItem(value: 'Settings', child: Text('Settings'))
+              const PopupMenuItem(value: 'Settings', child: Text('Settings')),
             ],
           ),
         ],
       ),
       body: SingleChildScrollView(
-          child: Column(
-            children: [
-
-          _buildSwipableTaskSection("Tasks Due Today", tasksDueToday),
-          _buildSwipableTaskSection("Tasks Due in Two Days", tasksDueInTwoDays),
-          const SizedBox(height: 20), // Adds spacing before task list
-          _buildTaskSection("Tasks List", otherTasks),
-            ]
-          )
-        
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildTaskSection("Tasks Due Today", tasksDueToday),
+            _buildTaskSection("Tasks Due In Two Days", tasksDueInTwoDays),
+            const SizedBox(height: 20),
+            _buildTaskSection("Other Tasks", otherTasks),
+          ],
+        ),
       ),
       floatingActionButton: FloatingActionButton(
         backgroundColor: const Color(0xff3ae882),
         onPressed: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => NewTask()),
-          ).then((_) => _loadTasks());
+          Navigator.push(context, MaterialPageRoute(builder: (context) => NewTask()))
+              .then((_) => _loadTasks());
         },
         child: const Icon(Icons.add, color: Colors.white),
       ),
-    );
-    
-  }
-
-  Widget _buildSwipableTaskSection(String title, List<Task> tasks) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.all(8.0),
-          child: Text(
-            title,
-            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-          ),
-        ),
-        Expanded(
-          child: SizedBox(
-          height: 200,
-          child: tasks.isEmpty
-              ? const Center(child: Text("No tasks available."))
-              : ListView.builder(
-                  scrollDirection: Axis.horizontal,
-                  itemCount: tasks.length,
-                  itemBuilder: (context, index) {
-                    return SizedBox(
-                      width: 250,
-                      child: Card(
-                        color: Colors.white,
-                        child: ListTile(
-                          title: Text(tasks[index].name),
-                          subtitle: Text("Due: ${tasks[index].notifyDate}"),
-                          onTap: () async {
-                            bool? updated = await Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) =>
-                                    EditTask(currentTask: tasks[index]),
-                              ),
-                            );
-                            if (updated == true) {
-                              _loadTasks();
-                            }
-                          },
-                        ),
-                      ),
-                    );
-                  },
-                ),
-        ),
-        )
-      ],
     );
   }
 
@@ -179,49 +167,68 @@ class _TasksListState extends State<TasksList> {
       children: [
         Padding(
           padding: const EdgeInsets.all(8.0),
-          child: Text(
-            title,
-            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-          ),
+          child: Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
         ),
         if (tasks.isEmpty)
           const Padding(
-            padding: EdgeInsets.all(8.0),
-            child: Text("No tasks available."),
+            padding: EdgeInsets.symmetric(horizontal: 16.0),
+            child: Text("No tasks in this category"),
           )
         else
-          Column(
-            children: tasks.map((task) => _buildTaskTile(task)).toList(),
-          ),
+          ...tasks.map((task) => _buildTaskCard(task)).toList(),
       ],
     );
   }
 
-  Widget _buildTaskTile(Task task) {
-    return ListTile(
-      tileColor: const Color(0x1f000000),
-      title: Text(task.name),
-      subtitle: Text(
-        task.notifyDate != null
-            ? "Scheduled: ${DateFormat('yyyy-MM-dd').format(DateTime.parse(task.notifyDate!))}"
-            : task.notifyHours != null
-                ? "Repeats every ${task.notifyHours} hours"
-                : task.notifyDays != null
-                    ? "Repeats every ${task.notifyDays} days"
-                    : "No reminders",
-      ),
-      onTap: () async {
-        bool? updated = await Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => EditTask(currentTask: task),
+  Widget _buildTaskCard(Task task) {
+    return Card(
+      margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 4.0),
+      child: ListTile(
+        title: Text(task.name),
+        subtitle: Text(
+          task.notificationTime != null 
+              ? "Due: ${_formatDateTime(task.notificationTime!)}"
+              : "No due date",
+        ),
+        trailing: IconButton(
+          icon: Icon(
+            task.notificationsPaused ? Icons.notifications_off : Icons.notifications_active,
+            color: task.notificationsPaused ? Colors.grey : Colors.blue,
           ),
-        );
-        if (updated == true) {
-          _loadTasks();
-        }
-      },
+          onPressed: () => _toggleNotifications(task),
+        ),
+        onTap: () async {
+          bool? updated = await Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => EditTask(task: task)),
+          );
+          if (updated == true) _loadTasks();
+        },
+      ),
     );
-    
+  }
+
+  String _formatDateTime(int timestamp) {
+    final date = DateTime.fromMillisecondsSinceEpoch(timestamp);
+    return DateFormat('MMM dd, yyyy - hh:mm a').format(date);
+  }
+
+  Future<void> _toggleNotifications(Task task) async {
+    try {
+      await dbHelper.updateTask(
+        Task(
+          id: task.id,
+          name: task.name,
+          taskType: task.taskType,
+          repeatType: task.repeatType,
+          customInterval: task.customInterval,
+          notificationTime: task.notificationTime,
+          notificationsPaused: !task.notificationsPaused,
+        ),
+      );
+      _loadTasks();
+    } catch (e) {
+      log("Error toggling notifications: $e");
+    }
   }
 }

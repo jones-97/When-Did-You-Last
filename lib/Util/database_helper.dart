@@ -27,6 +27,8 @@ class DatabaseHelper {
       databaseFactory = databaseFactoryFfiWeb; // ✅ Use IndexedDB for Web
     }
 
+    //WE WILL HAVE TO RENAME SOME FIELDS HERE TO REDUCE CONFUSION.
+
     try {
       final dbPath = await getDatabasesPath();
       final path = join(dbPath, 'tasks.db');
@@ -35,38 +37,46 @@ class DatabaseHelper {
 
       return await openDatabase(
         path,
-        version: 3, //Changing version to force migration
+        version: 1, //Can change the version to force migration
         onCreate: (db, version) async {
           await db.execute('''
   CREATE TABLE IF NOT EXISTS tasks (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL,
-    completed INTEGER DEFAULT 0,
-    notify_hours INTEGER,
-    notify_days INTEGER,
-    notify_date TEXT,
-    notifications_paused INTEGER DEFAULT 0  -- ✅ New column (0 = active, 1 = paused)
+    details TEXT,
+    task_type TEXT NOT NULL,
+    repeat_type TEXT,
+    interval_value INTEGER DEFAULT NULL,
+    custom_interval INTEGER DEFAULT NULL, 
+    notification_time INTEGER DEFAULT 0,
+    notifications_paused INTEGER DEFAULT 0
   )
 ''');
 
 
           db.execute('''
-        CREATE TABLE task_completion (
+        CREATE TABLE completed_tasks (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
           task_id INTEGER NOT NULL,
           completed_date TEXT NOT NULL,
           FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE
         )
       ''');
+
+      
+          db.execute('''
+        CREATE TABLE running_tasks (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          task_id INTEGER NOT NULL,
+          start_time TEXT,
+          elapsed_time INTEGER,
+          paused INTEGER DEFAULT 0,
+          FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE
+        )
+      ''');
       debugPrint("Database creation successfult");
     },
-    onUpgrade: (db, oldVersion, newVersion) async {
-      if (oldVersion < 3) {
-            await db.execute("ALTER TABLE tasks ADD COLUMN notifications_paused INTEGER DEFAULT 0");
-        
-        
-      }
-    },
+   
   );
 }
         catch (e) {
@@ -78,13 +88,17 @@ class DatabaseHelper {
   // Insert a Task
   Future<int> insertTask(Task task) async {
     try {
+      debugPrint("Task inserted successfully!");
       final db = await database;
       return await db.insert('tasks', task.toMap(),
           conflictAlgorithm: ConflictAlgorithm.replace);
+          
+          
     } catch (e) {
       debugPrint("Error inserting task: $e");
       rethrow;
     }
+    
   }
 
   // Retrieve All Tasks
@@ -124,7 +138,7 @@ class DatabaseHelper {
 
 // HANDLING TASK COMPLETION DATES
 
-//pause a task
+//pause a task NOTIFICATIONS
 Future<void> pauseTask(int taskID) async {
   try {
       final db = await database;
@@ -141,10 +155,9 @@ Future<void> pauseTask(int taskID) async {
     }
 }
 
-//pause a task
-Future<void> restartTask(int taskID) async {
-  //pause a task
-Future<void> pauseTask(int taskID) async {
+//restart a task
+Future<void> resumeTask (int taskID) async {
+
   try {
       final db = await database;
 
@@ -159,13 +172,13 @@ Future<void> pauseTask(int taskID) async {
       rethrow;
     }
 }
-}
+
 //mark a task done
 Future<void> markTaskDone(int taskId, String date) async {
   try{
   final db = await database;
   await db.insert(
-    'task_completion',
+    'completed_tasks',
     {'task_id': taskId, 'completed_date': date},
     conflictAlgorithm: ConflictAlgorithm.ignore, // Prevent duplicates
   );
@@ -179,7 +192,7 @@ Future<void> unmarkTaskDone(int taskId, String date) async {
   try{
   final db = await database;
   await db.delete(
-    'task_completion',
+    'completed_tasks',
     where: 'task_id = ? AND completed_date = ?',
     whereArgs: [taskId, date],
   );
@@ -193,7 +206,7 @@ Future<List<String>> getTaskCompletionDates(int taskId) async {
   try{
   final db = await database;
   final List<Map<String, dynamic>> results = await db.query(
-    'task_completion',
+    'completed_tasks',
     where: 'task_id = ?',
     whereArgs: [taskId],
   );
@@ -204,15 +217,6 @@ Future<List<String>> getTaskCompletionDates(int taskId) async {
   }
 }
 
-Future<void> updateTaskNotificationStatus(int taskId, int isPaused) async {
-  final db = await database;
-  await db.update(
-    'tasks',
-    {'notifications_paused': isPaused},
-    where: 'id = ?',
-    whereArgs: [taskId],
-  );
-}
 
 Future<Task?> getTaskById(int taskId) async {
   final db = await database;
@@ -224,6 +228,21 @@ Future<Task?> getTaskById(int taskId) async {
   }
   return null;
 }
+
+Future<List<Task>> getTasksDueSoon() async {
+  final db = await database;
+  final now = DateTime.now();
+  final tomorrow = now.add(const Duration(days: 1)).toIso8601String().split('T')[0];
+  final dayAfterTomorrow = now.add(const Duration(days: 2)).toIso8601String().split('T')[0];
+
+  final List<Map<String, dynamic>> maps = await db.rawQuery('''
+    SELECT * FROM tasks
+    WHERE notification_time IN (?, ?)
+  ''', [tomorrow, dayAfterTomorrow]);
+
+  return maps.map((map) => Task.fromMap(map)).toList();
+}
+
 
 
 
