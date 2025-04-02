@@ -1,7 +1,9 @@
 // import 'dart:ffi';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:when_did_you_last/Util/notifications_helper.dart';
 import 'Util/database_helper.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'Models/task.dart';
 // import 'Util/notifications_helper.dart';
 // import 'package:shared_preferences/shared_preferences.dart';
@@ -13,7 +15,7 @@ class NewTask extends StatefulWidget {
 
 class _NewTaskState extends State<NewTask> {
   String _selectedTaskType = "No Alert/Tracker";
-  String? _selectedNotificationType;
+  String? _selectedDurationType;
   int? _selectedTime;
   bool _showDetails = false;
   String? selectedDateString;
@@ -163,7 +165,7 @@ void calculateDateTime() {
 Future<void> _saveTask() async {
   int? custom_interval;
 
-  if (_selectedNotificationType == "specific" && _selectedDate == null) {
+  if (_selectedDurationType == "Specific" && _selectedDate == null) {
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text("Please select a date and time")),
     );
@@ -171,27 +173,27 @@ Future<void> _saveTask() async {
   }
 
   // Calculate notification time based on selection
-  if (_selectedNotificationType == "hours" && _hoursController.text.isNotEmpty) {
+  if (_selectedDurationType == "Hours" && _hoursController.text.isNotEmpty) {
     _selectedTime = DateTime.now()
         .add(Duration(hours: int.parse(_hoursController.text)))
         .millisecondsSinceEpoch;
   } 
-  else if (_selectedNotificationType == "days" && _daysController.text.isNotEmpty) {
+  else if (_selectedDurationType == "Days" && _daysController.text.isNotEmpty) {
     _selectedTime = DateTime.now()
         .add(Duration(days: int.parse(_daysController.text)))
         .millisecondsSinceEpoch;
   } 
-  else if (_selectedNotificationType == "specific" && _selectedDate != null) {
+  else if (_selectedDurationType == "Specific" && _selectedDate != null) {
     _selectedTime = _selectedDate!.millisecondsSinceEpoch;
   } 
   else {
     _selectedTime = null;
   }
 
-    if (_selectedNotificationType == 'hours' && _hoursController.text.isNotEmpty) {
+    if (_selectedDurationType == 'Hours' && _hoursController.text.isNotEmpty) {
     custom_interval = int.tryParse(_hoursController.text);
   } 
-  else if (_selectedNotificationType == 'days' && _daysController.text.isNotEmpty) {
+  else if (_selectedDurationType == 'Days' && _daysController.text.isNotEmpty) {
     custom_interval = int.tryParse(_daysController.text);
   }
 
@@ -199,13 +201,35 @@ Future<void> _saveTask() async {
     name: _nameController.text,
     details: _showDetails ? _detailsController.text : null,
     taskType: _selectedTaskType,
-    repeatType: _selectedNotificationType ?? "none",
+    durationType: _selectedDurationType ?? "None",
+    customInterval: custom_interval ?? 0,
     notificationTime: _selectedTime,
     notificationsPaused: false,
   );
 
-  await DatabaseHelper().insertTask(task);
+  final id = await DatabaseHelper().insertTask(task);
+
+   // First insert the task to get the auto-generated ID
+  
+  
+  // Now update the task with the generated ID
+  final taskWithId = task.copyWith(id: id);
+  
+  // Schedule notification with the actual ID
+  // if (taskWithId.notificationTime != null) {
+  //   await NotificationHelper.scheduleTaskNotification(taskWithId);
+  // }
+
+   //SCHEDULE NOTIFICATION
+  if (!kIsWeb) {
+      if (task.taskType != "No Alert/Tracker" && task.notificationTime != null) {
+    await NotificationHelper.scheduleNotification(taskWithId);
+  }
+  }
+
   Navigator.pop(context, true);
+
+ 
 }
 
   @override
@@ -275,6 +299,7 @@ Future<void> _saveTask() async {
                 isDense: false,
               ),
             ),
+
             Padding(
               padding: EdgeInsets.all(16.0),
               child: Column(
@@ -287,7 +312,7 @@ Future<void> _saveTask() async {
                     onChanged: (newValue) {
                       setState(() {
                         _selectedTaskType = newValue!;
-                        _selectedNotificationType =
+                        _selectedDurationType =
                             null; // Reset notification selection
                       });
                     },
@@ -306,19 +331,20 @@ Future<void> _saveTask() async {
                   if (_selectedTaskType == "One-Time" ||
                       _selectedTaskType == "Repetitive") ...[
                     Text("Notification Type"),
+                    //Notif type is duration type
                     Column(
                       children: [
                         RadioListTile<String>(
                           title: Text("Notify after hours"),
-                          value: "hours",
-                          groupValue: _selectedNotificationType,
+                          value: "Hours",
+                          groupValue: _selectedDurationType,
                           onChanged: (value) {
                             setState(() {
-                              _selectedNotificationType = value;
+                              _selectedDurationType = value;
                             });
                           },
                         ),
-                        if (_selectedNotificationType == "hours") ...[
+                        if (_selectedDurationType == "Hours") ...[
                           TextField(
                             keyboardType: TextInputType.number,
                             decoration:
@@ -328,15 +354,15 @@ Future<void> _saveTask() async {
                         ],
                         RadioListTile<String>(
                           title: Text("Notify after days"),
-                          value: "days",
-                          groupValue: _selectedNotificationType,
+                          value: "Days",
+                          groupValue: _selectedDurationType,
                           onChanged: (value) {
                             setState(() {
-                              _selectedNotificationType = value;
+                              _selectedDurationType = value;
                             });
                           },
                         ),
-                        if (_selectedNotificationType == "days") ...[
+                        if (_selectedDurationType == "Days") ...[
                           TextField(
                             keyboardType: TextInputType.number,
                             decoration:
@@ -348,16 +374,16 @@ Future<void> _saveTask() async {
                             "One-Time") // Only show this for One-Time tasks
                           RadioListTile<String>(
                             title: Text("Set specific date/time"),
-                            value: "specific",
-                            groupValue: _selectedNotificationType,
+                            value: "Specific",
+                            groupValue: _selectedDurationType,
                             onChanged: (value) {
                               setState(() {
-                                _selectedNotificationType = value;
+                                _selectedDurationType = value;
                                 _pickDateTime(context);
                               });
                             },
                           ),
-                        if (_selectedNotificationType == "specific") ...[
+                        if (_selectedDurationType == "Specific") ...[
                           Text("Selected Date Picked: $selectedDateString")
                         ],
                       ],

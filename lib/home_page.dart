@@ -70,7 +70,7 @@ class _MyHomePageState extends State<MyHomePage> {
               else if(value == 'Test Notification') {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => const TestNotificationScreen()),
+                  MaterialPageRoute(builder: (context) => TestNotificationScreen()),
                 );
               }
 

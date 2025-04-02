@@ -2,11 +2,10 @@ class Task {
   int? id;
   String name;
   String? details;
-  String taskType; //no-alert/tracker, one-time, repetitive
-  String repeatType; //none, minute, hourly, daily, specified
-  int? intervalValue; //to store EXACT interval values for hourly and daily timed tasks; datetime.now reduces the duration
+  String taskType; //No Alert/Tracker, One-Time, Repetitive
+  String durationType; //None, Minutes, Hours, Days, Specific
   int? customInterval; // Nullable, for specifically-time reminders; future possible implementation
-  int? notificationTime;
+  int? notificationTime; //to store EXACT values tasks due dates and times; a store for specific task types
   bool notificationsPaused;
   //   List<String> completedDates = []; // Store multiple completion dates
 
@@ -15,7 +14,7 @@ class Task {
     required this.name,
     this.details,
     required this.taskType,
-    required this.repeatType,
+    required this.durationType,
     this.customInterval,
     this.notificationTime,
     this.notificationsPaused = false,
@@ -28,7 +27,7 @@ class Task {
       'name': name,
       'details': details,
       'task_type': taskType,
-      'repeat_type': repeatType,
+      'duration_type': durationType,
       'custom_interval': customInterval,
       'notification_time': notificationTime,
       'notifications_paused': notificationsPaused ? 1 : 0,
@@ -42,10 +41,35 @@ class Task {
       name: map['name'],
       details: map['details'],
       taskType: map['task_type'],
-      repeatType: map['repeat_type'],
+      durationType: map['duration_type'],
       customInterval: map['custom_interval'],
       notificationTime: map['notification_time'],
       notificationsPaused: map['notifications_paused'] == 1,
     );
   }
+  
+  Task copyWith({
+    int? id,
+    String? name,
+    String? details,
+    String? taskType,
+    String? durationType,
+    int? notificationTime,
+    bool? notificationsPaused,
+    int? customInterval,
+  }) {
+    return Task(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      details: details ?? this.details,
+      taskType: taskType ?? this.taskType,
+      durationType: durationType ?? this.durationType,
+      notificationTime: notificationTime ?? this.notificationTime,
+      notificationsPaused: notificationsPaused ?? this.notificationsPaused,
+      customInterval: customInterval ?? this.customInterval,
+    );
+  }
 }
+
+
+

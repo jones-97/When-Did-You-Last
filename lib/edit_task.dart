@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'Models/task.dart';
 import 'Util/database_helper.dart';
+import 'Util/notifications_helper.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 
 class EditTask extends StatefulWidget {
   final Task task;
@@ -23,13 +25,13 @@ class _EditTaskState extends State<EditTask> {
   late TextEditingController _daysController;
   
   String? _selectedTaskType = "No Alert/Tracker";
-  String? _selectedNotificationType;
+  String? _selectedDurationType;
   bool _showDetails = false;
   DateTime? _selectedDate;
   String? selectedDateString;
   int? _notificationTime;
   bool _notificationsPaused = false;
-  Duration? _timeOffset;
+  // Duration? _timeOffset;
 
  
 
@@ -53,9 +55,9 @@ class _EditTaskState extends State<EditTask> {
 
   void _initializeNotificationSettings() {
     // Set the radio button based on repeatType
-    _selectedNotificationType = widget.task.repeatType == 'none' 
+    _selectedDurationType = widget.task.durationType == 'None' 
         ? null 
-        : widget.task.repeatType;
+        : widget.task.durationType;
       // "No Alert/Tracker";
       //                 "One-Time";
       //                 "Repetitive";
@@ -70,10 +72,10 @@ class _EditTaskState extends State<EditTask> {
 
   if (widget.task.customInterval != null) {
     // For tasks with stored custom interval
-    if (widget.task.repeatType == 'days') {
+    if (widget.task.durationType == 'Days') {
       _daysController.text = widget.task.customInterval.toString();
     } 
-    else if (widget.task.repeatType == 'hours') {
+    else if (widget.task.durationType == 'Hours') {
       _hoursController.text = widget.task.customInterval.toString();
     }
   }
@@ -83,18 +85,18 @@ class _EditTaskState extends State<EditTask> {
 
     final taskTime = DateTime.fromMillisecondsSinceEpoch(widget.task.notificationTime!);
     
-    if (widget.task.repeatType == 'days') {
+    if (widget.task.durationType == 'Days') {
       // Calculate approximate days (rounded to nearest whole number)
       double days = (widget.task.notificationTime! - DateTime.now().millisecondsSinceEpoch) / 
                    (1000 * 60 * 60 * 24);
       _daysController.text = days.round().toString();
     }
-    else if (widget.task.repeatType == 'hours') {
+    else if (widget.task.durationType == 'Hours') {
       double hours = (widget.task.notificationTime! - DateTime.now().millisecondsSinceEpoch) / 
                     (1000 * 60 * 60);
       _hoursController.text = hours.round().toString();
     }
-    else if (widget.task.repeatType == 'specific') {
+    else if (widget.task.durationType == 'Specific') {
       _selectedDate = taskTime;
       selectedDateString = DateFormat('MMM dd, yyyy - hh:mm a').format(taskTime);
     }
@@ -161,13 +163,13 @@ class _EditTaskState extends State<EditTask> {
     return;
   }
 
-  if (_selectedNotificationType == 'hours' && _hoursController.text.isNotEmpty) {
+  if (_selectedDurationType == 'hours' && _hoursController.text.isNotEmpty) {
     int hours = int.tryParse(_hoursController.text) ?? 0;
     if (hours > 0) {
       _notificationTime = DateTime.now().add(Duration(hours: hours)).millisecondsSinceEpoch;
     }
   } 
-  else if (_selectedNotificationType == 'days' && _daysController.text.isNotEmpty) {
+  else if (_selectedDurationType == 'days' && _daysController.text.isNotEmpty) {
     int days = int.tryParse(_daysController.text) ?? 0;
     if (days > 0) {
       _notificationTime = DateTime.now().add(Duration(days: days)).millisecondsSinceEpoch;
@@ -181,10 +183,10 @@ class _EditTaskState extends State<EditTask> {
 
      // Determine custom_interval value
   int? customInterval;
-  if (_selectedNotificationType == 'hours' && _hoursController.text.isNotEmpty) {
+  if (_selectedDurationType == 'Hours' && _hoursController.text.isNotEmpty) {
     customInterval = int.tryParse(_hoursController.text);
   } 
-  else if (_selectedNotificationType == 'days' && _daysController.text.isNotEmpty) {
+  else if (_selectedDurationType == 'Days' && _daysController.text.isNotEmpty) {
     customInterval = int.tryParse(_daysController.text);
   }
 
@@ -194,13 +196,21 @@ class _EditTaskState extends State<EditTask> {
       name: _nameController.text,
       details: _showDetails ? _detailsController.text : null,
       taskType: _selectedTaskType!,
-      repeatType: _selectedNotificationType ?? "none",
+      durationType: _selectedDurationType ?? "None",
       notificationTime: _notificationTime,
       notificationsPaused: _notificationsPaused,
-      customInterval: customInterval, //stores original interval value eg 1 hour, 2 days
+      customInterval: customInterval ?? 0, //stores original interval value eg 1 hour, 2 days
     );
 
     final result = await DatabaseHelper().updateTask(updatedTask);
+
+    //SCHEDULE NOTIFICATION
+  if (!kIsWeb) {
+      if (updatedTask.taskType != "No Alert/Tracker" && updatedTask.notificationTime != null) {
+    await NotificationHelper.scheduleNotification(updatedTask);
+  }
+  }
+
     if (result > 0) {
       Navigator.pop(context, true);
     } else {
@@ -281,7 +291,7 @@ class _EditTaskState extends State<EditTask> {
                       onChanged: (newValue) {
                         setState(() {
                           _selectedTaskType = newValue!;
-                          _selectedNotificationType = null;
+                          _selectedDurationType = null;
                         });
                       },
                       items: [
@@ -300,19 +310,20 @@ class _EditTaskState extends State<EditTask> {
 
                     if (_selectedTaskType == "One-Time" || _selectedTaskType == "Repetitive") ...[
                       Text("Notification Type"),
+                      //Notif type is duration type
                       Column(
                         children: [
                           RadioListTile<String>(
                             title: Text("Notify after hours"),
-                            value: "hours",
-                            groupValue: _selectedNotificationType,
+                            value: "Hours",
+                            groupValue: _selectedDurationType,
                             onChanged: (value) {
                               setState(() {
-                                _selectedNotificationType = value;
+                                _selectedDurationType = value;
                               });
                             },
                           ),
-                          if (_selectedNotificationType == "hours") ...[
+                          if (_selectedDurationType == "Hours") ...[
                             TextField(
                               controller: _hoursController,
                               keyboardType: TextInputType.number,
@@ -321,15 +332,15 @@ class _EditTaskState extends State<EditTask> {
                           ],
                           RadioListTile<String>(
                             title: Text("Notify after days"),
-                            value: "days",
-                            groupValue: _selectedNotificationType,
+                            value: "Days",
+                            groupValue: _selectedDurationType,
                             onChanged: (value) {
                               setState(() {
-                                _selectedNotificationType = value;
+                                _selectedDurationType = value;
                               });
                             },
                           ),
-                          if (_selectedNotificationType == "days") ...[
+                          if (_selectedDurationType == "Days") ...[
                             TextField(
                               controller: _daysController,
                               keyboardType: TextInputType.number,
@@ -339,16 +350,16 @@ class _EditTaskState extends State<EditTask> {
                           if (_selectedTaskType == "One-Time")
                             RadioListTile<String>(
                               title: Text("Set specific date/time"),
-                              value: "specific",
-                              groupValue: _selectedNotificationType,
+                              value: "Specific",
+                              groupValue: _selectedDurationType,
                               onChanged: (value) {
                                 setState(() {
-                                  _selectedNotificationType = value;
+                                  _selectedDurationType = value;
                                   _pickDateTime(context);
                                 });
                               },
                             ),
-                          if (_selectedNotificationType == "specific") ...[
+                          if (_selectedDurationType == "Specific") ...[
                             Text("Selected Date: ${selectedDateString ?? 'Not selected'}")
                           ],
                         ],
@@ -382,7 +393,8 @@ class _EditTaskState extends State<EditTask> {
                         ),
                       ),
                     ],
-                  if (_selectedTaskType == "No Alert/Tracker") ... [
+                    
+                  if (_selectedTaskType != "No Alert/Tracker") ... [
                       SwitchListTile(
                       title: Text("Pause Notifications?"),
                       value: _notificationsPaused,

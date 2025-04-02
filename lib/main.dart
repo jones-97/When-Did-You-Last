@@ -21,13 +21,9 @@ import 'Util/notifications_helper.dart';
 // import 'dart:io';
 import 'home_page.dart'; // Import the new home.dart file
 
-
-
-
 late SharedPreferences prefs;
-late var _notificationsPlugin;
+//late var _notificationsPlugin;
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
-
 
 /* Future<void> requestNotificationPermissions(BuildContext context) async {
   if (Theme.of(context).platform == TargetPlatform.android) {
@@ -49,9 +45,6 @@ Future<void> _requestNotificationPermission() async {
   }
 }
 
-
-
-
 void handleNotificationResponse(String payload) async {
   List<String> parts = payload.split(":");
   int taskId = int.parse(parts[1]);
@@ -60,10 +53,10 @@ void handleNotificationResponse(String payload) async {
     // await DatabaseHelper().updateTaskNotificationStatus(taskId, 1); // Pause notifications
     await NotificationHelper.cancelNotification(taskId);
   } else if (parts[0] == "CONTINUE") {
-  //   await DatabaseHelper().updateTaskNotificationStatus(taskId, 0); // Resume notifications
+    //   await DatabaseHelper().updateTaskNotificationStatus(taskId, 0); // Resume notifications
     Task? task = await DatabaseHelper().getTaskById(taskId);
     if (task != null) {
-      await NotificationHelper.scheduleTaskNotification(task);
+      await NotificationHelper.scheduleNotification(task);
     }
   }
 }
@@ -78,56 +71,45 @@ Future<void> _requestNotificationPermission() async {
 
 void main() async {
   try {
+    //   if (Platform.isWindows || Platform.isLinux) {
+    //   // Initialize FFI
+    //   sqfliteFfiInit();
+    // }
 
-  //   if (Platform.isWindows || Platform.isLinux) {
-  //   // Initialize FFI
-  //   sqfliteFfiInit();
-  // }
-  
-  WidgetsFlutterBinding.ensureInitialized(); // Ensures Flutter is fully initialized
-  // prefs = await SharedPreferences.getInstance();
-  //  bool isDarkMode = prefs.getBool('darkMode') ?? false;
+    WidgetsFlutterBinding
+        .ensureInitialized(); // Ensures Flutter is fully initialized
+    // prefs = await SharedPreferences.getInstance();
+    //  bool isDarkMode = prefs.getBool('darkMode') ?? false;
 
+    if (!kIsWeb) {
+      await Workmanager().initialize(callbackDispatcher);
+      await _requestNotificationPermission();
+      await _requestExactAlarmPermission();
+      _requestBatteryOptimization();
+    }
 
-if (!kIsWeb) {
-  await Workmanager().initialize(callbackDispatcher);
-  await _requestNotificationPermission();
-  await _requestExactAlarmPermission();
-  _requestBatteryOptimization();
-}
-  
+    // Initialize the database before running the app
+    // final dbHelper = DatabaseHelper();
+    // await dbHelper.database;
 
+    tz.initializeTimeZones();
 
-  // Initialize the database before running the app
-  // final dbHelper = DatabaseHelper();
-  // await dbHelper.database;
+    if (kIsWeb) {
+      // running on the web!
+      databaseFactory = databaseFactoryFfiWeb;
+      //Ensures IndexedDB is properly used because of persistence issues (remembering data) on the web
+    }
 
-  tz.initializeTimeZones();
-   
-
-  if (kIsWeb) {
-  // running on the web!
-    databaseFactory = databaseFactoryFfiWeb;
-    //Ensures IndexedDB is properly used because of persistence issues (remembering data) on the web
-  }
-
-  await NotificationHelper.init();
+    await NotificationHelper.init();
 
 //  await _testNotification();
 
-  runApp(
-    
-    
-    ChangeNotifierProvider(create: (context) => ThemeProvider(),
-    child: const MyApp()  
-    )
-  );
-  }
-  catch (e) {
+    runApp(ChangeNotifierProvider(
+        create: (context) => ThemeProvider(), child: const MyApp()));
+  } catch (e) {
     debugPrint("Problem initializing the whole app:  $e");
   }
 }
-
 
 Future<void> _requestBatteryOptimization() async {
   DeviceInfoPlugin deviceInfo = DeviceInfoPlugin();
@@ -136,7 +118,8 @@ Future<void> _requestBatteryOptimization() async {
   if (androidInfo.version.sdkInt >= 23) {
     const intent = AndroidIntent(
       action: 'android.settings.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS',
-      data: 'package:com.example.yourapp', // ✅ Replace with your app's package name
+      data:
+          'package:com.example.yourapp', // ✅ Replace with your app's package name
       flags: <int>[Flag.FLAG_ACTIVITY_NEW_TASK],
     );
     await intent.launch();
@@ -150,10 +133,10 @@ void callbackDispatcher() {
   });
 }
 
-
 Future<void> _requestExactAlarmPermission() async {
   final prefs = await SharedPreferences.getInstance();
-  bool isAlarmPermissionGranted = prefs.getBool('alarmPermissionGranted') ?? false;
+  bool isAlarmPermissionGranted =
+      prefs.getBool('alarmPermissionGranted') ?? false;
 
   if (!isAlarmPermissionGranted && (await getAndroidSdkVersion()) >= 31) {
     // ✅ Use navigatorKey to get context safely
@@ -163,7 +146,8 @@ Future<void> _requestExactAlarmPermission() async {
         builder: (context) {
           return AlertDialog(
             title: const Text("Enable Alarm Permissions"),
-            content: const Text("This app needs permission to schedule exact alarms. Please allow it in settings."),
+            content: const Text(
+                "This app needs permission to schedule exact alarms. Please allow it in settings."),
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(context), // ✅ User can cancel
@@ -189,15 +173,12 @@ Future<void> _requestExactAlarmPermission() async {
   }
 }
 
-
 Future<int> getAndroidSdkVersion() async {
   final androidInfo = await DeviceInfoPlugin().androidInfo;
   return androidInfo.version.sdkInt;
 }
 
 class MyApp extends StatelessWidget {
-  
-
   const MyApp({super.key});
 
   /*
@@ -227,19 +208,16 @@ class _MyAppState extends State<MyApp> {
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<ThemeProvider>(
-     
-      builder: (context, themeProvider, child) {
-        return MaterialApp(
-           navigatorKey: navigatorKey,
-      debugShowCheckedModeBanner: false,
-      title: 'When Did You Last?',
-      theme: ThemeData.light(), 
-      darkTheme: ThemeData.dark(),
-      themeMode: themeProvider.isDarkMode ? ThemeMode.dark : ThemeMode.light,
-      home: const MyHomePage(), // Set HomeScreen as the main screen
-    );
-      }
-    );
+    return Consumer<ThemeProvider>(builder: (context, themeProvider, child) {
+      return MaterialApp(
+        navigatorKey: navigatorKey,
+        debugShowCheckedModeBanner: false,
+        title: 'When Did You Last?',
+        theme: ThemeData.light(),
+        darkTheme: ThemeData.dark(),
+        themeMode: themeProvider.isDarkMode ? ThemeMode.dark : ThemeMode.light,
+        home: const MyHomePage(), // Set HomeScreen as the main screen
+      );
+    });
   }
 }

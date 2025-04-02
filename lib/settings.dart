@@ -159,6 +159,7 @@ class _SettingsState extends State<Settings> {
       ),
       body: ListView(
         children: [
+            /*
           ListTile(
             title: const Text("Default Task Time"),
             subtitle: Text(_defaultTaskTime != null
@@ -175,9 +176,11 @@ class _SettingsState extends State<Settings> {
             trailing: const Icon(Icons.music_note),
             onTap: _pickRingtone,
           ),
+            */
+
            ListTile(
             title: const Text("Manage Notifications in System Settings"),
-            subtitle: const Text("Customize sound, priority, and behavior. Use this is above doesn't work"),
+            subtitle: const Text("Customize sound, priority, and behavior"),
             trailing: const Icon(Icons.settings),
             onTap: _openAndroidNotificationSettings,
           ),
@@ -193,6 +196,7 @@ class _SettingsState extends State<Settings> {
               });
             },
           ),
+          /*
           SwitchListTile(
             title: const Text("Auto-Complete Tasks"),
             subtitle: const Text("Mark task as done when due date passes"),
@@ -204,6 +208,7 @@ class _SettingsState extends State<Settings> {
               });
             },
           ),
+          */
           SwitchListTile(
             title: const Text("Dark Mode"),
             value: themeProvider.isDarkMode,
@@ -224,6 +229,7 @@ class _SettingsState extends State<Settings> {
     await intent.launch();
   },
 ),
+/*
 ListTile(
   title: const Text("Background Activity Settings"),
   subtitle: const Text("Manually enable background activity for notifications."),
@@ -237,6 +243,7 @@ ListTile(
     await intent.launch();
   },
 ),
+*/
         ],
       ),
     );

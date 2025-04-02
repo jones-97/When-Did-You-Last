@@ -190,13 +190,7 @@ class _TasksListState extends State<TasksList> {
               ? "Due: ${_formatDateTime(task.notificationTime!)}"
               : "No due date",
         ),
-        trailing: IconButton(
-          icon: Icon(
-            task.notificationsPaused ? Icons.notifications_off : Icons.notifications_active,
-            color: task.notificationsPaused ? Colors.grey : Colors.blue,
-          ),
-          onPressed: () => _toggleNotifications(task),
-        ),
+        trailing: _buildNotificationStatusIcon(task),
         onTap: () async {
           bool? updated = await Navigator.push(
             context,
@@ -207,6 +201,29 @@ class _TasksListState extends State<TasksList> {
       ),
     );
   }
+
+  Widget _buildNotificationStatusIcon(Task task) {
+  // No icon for tasks without alerts
+  if (task.taskType == "No Alert/Tracker") {
+    return const SizedBox.shrink();
+  }
+
+  return Tooltip(
+    message: task.notificationsPaused
+        ? "Notifications paused - edit to enable"
+        : "Reminders active",
+    child: Icon(
+      task.notificationsPaused
+          ? Icons.notifications_off
+          : Icons.notifications_active,
+      color: task.notificationsPaused
+          ? Colors.grey
+          : Theme.of(context).colorScheme.secondary,
+      size: 20,
+    ),
+  );
+}
+
 
   String _formatDateTime(int timestamp) {
     final date = DateTime.fromMillisecondsSinceEpoch(timestamp);
@@ -220,7 +237,7 @@ class _TasksListState extends State<TasksList> {
           id: task.id,
           name: task.name,
           taskType: task.taskType,
-          repeatType: task.repeatType,
+          durationType: task.durationType,
           customInterval: task.customInterval,
           notificationTime: task.notificationTime,
           notificationsPaused: !task.notificationsPaused,
