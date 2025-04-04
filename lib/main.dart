@@ -40,6 +40,10 @@ final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 */
 
 Future<void> _requestNotificationPermission() async {
+  
+
+
+
   if (await Permission.notification.isDenied) {
     await Permission.notification.request();
   }

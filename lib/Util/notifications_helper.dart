@@ -5,7 +5,6 @@ import 'package:timezone/data/latest_all.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/material.dart';
-import 'package:when_did_you_last/main.dart';
 import '../Util/database_helper.dart';
 import '../Models/task.dart';
 
@@ -18,6 +17,7 @@ class NotificationHelper {
     final prefs = await SharedPreferences.getInstance();
     String? toneUri = prefs.getString('selectedRingtoneUri');
 
+    WidgetsFlutterBinding.ensureInitialized();
     tz.initializeTimeZones();
 
     const AndroidInitializationSettings androidInitSettings =
@@ -61,7 +61,7 @@ class NotificationHelper {
     AndroidNotificationChannel channel = AndroidNotificationChannel(
       'task_channel_id', // Must match the channel ID in scheduleNotification
       'Task Notifications', // Channel name
-      importance: Importance.high,
+      importance: Importance.max,
       sound: toneUri != null ? UriAndroidNotificationSound(toneUri) : null,
     );
 
@@ -74,7 +74,16 @@ class NotificationHelper {
 
 static Future<void> scheduleNotification(Task task) async {
   if (task.notificationTime == null) return;
+
   
+  
+  debugPrint("""
+Scheduling Notification:
+- ID: ${task.id}
+- Name: ${task.name}
+- Time: ${DateTime.fromMillisecondsSinceEpoch(task.notificationTime!)}
+- Type: ${task.taskType}
+""");
 
   // For testing, allow negative IDs
   if (task.id == null || task.id! > 0) {
@@ -86,7 +95,7 @@ static Future<void> scheduleNotification(Task task) async {
   final scheduledTime = DateTime.fromMillisecondsSinceEpoch(task.notificationTime!);
 
   // Debug prints
-  debugPrint("Scheduling ${isRepetitive ? 'repetitive' : 'one-time'} notification");
+  debugPrint("Scheduling ${isRepetitive ? 'Repetitive' : 'One-Time'} notification");
   debugPrint("Scheduled time: $scheduledTime");
   debugPrint("Current time: ${DateTime.now()}");
 
@@ -101,12 +110,24 @@ static Future<void> scheduleNotification(Task task) async {
     enableVibration: true,
     actions: isRepetitive
         ? [
-            const AndroidNotificationAction('CONTINUE', 'Continue'),
-            const AndroidNotificationAction('STOP', 'Stop'),
-          ]
-        : [
-            const AndroidNotificationAction('OK', 'OK'),
-          ],
+        const AndroidNotificationAction(
+          'continue_action',  // Changed from 'CONTINUE'
+          'Continue',
+          cancelNotification: true,
+        ),
+        const AndroidNotificationAction(
+          'stop_action',  // Changed from 'STOP'
+          'Stop',
+          cancelNotification: true,
+        ),
+      ]
+    : [
+        const AndroidNotificationAction(
+          'ok_action',  // Changed from 'OK'
+          'OK',
+          cancelNotification: true,
+        ),
+      ]
   );
 
   try {
@@ -118,7 +139,15 @@ static Future<void> scheduleNotification(Task task) async {
         tz.TZDateTime.from(scheduledTime, tz.local),
         NotificationDetails(android: androidDetails),
         androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+        matchDateTimeComponents: DateTimeComponents.time,
         payload: task.id.toString(),
+
+        //For automatic rescheduling
+      //   callback: (id) async {
+      //   if (task.taskType == "Repetitive") {
+      //     await rescheduleTask(task.id!);
+      //   }
+      // },
       );
     } else {
       await _notificationsPlugin.zonedSchedule(
@@ -138,57 +167,67 @@ static Future<void> scheduleNotification(Task task) async {
   }
 }
 
-
-  static Future<void> _handleNotificationAction(NotificationResponse response) async {
+static Future<void> _handleNotificationAction(NotificationResponse response) async {
   final taskId = int.tryParse(response.payload ?? '');
   if (taskId == null) return;
 
-  final task = await DatabaseHelper().getTaskById(taskId);
-  if (task == null) return;
-
-  switch (response.actionId) {
-    case 'OK': // One-time task action
-      await markTaskAsDone(taskId);
-      break;
-    case 'CONTINUE': // Repetitive task continue
-      await rescheduleTask(taskId);
-      break;
-    case 'STOP': // Repetitive task stop
-      await stopTask(taskId);
-      break;
-    default:
-      // Handle notification tap without action
-      if (task.taskType == "One-Time") {
+  try {
+    switch (response.actionId) {
+      case 'ok_action':  // Updated to match new ID
         await markTaskAsDone(taskId);
-      }
+        break;
+      case 'continue_action':  // Updated to match new ID
+        await rescheduleTask(taskId);
+        break;
+      case 'stop_action':  // Updated to match new ID
+        await stopTask(taskId);
+        break;
+      default:
+        final task = await DatabaseHelper().getTaskById(taskId);
+        if (task?.taskType == "One-Time") {
+          await markTaskAsDone(taskId);
+        }
+    }
+  } catch (e) {
+    debugPrint("Error handling notification action: $e");
   }
 }
 
+static Future<void> rescheduleTask(int taskId) async {
+  final dbHelper = DatabaseHelper();
+  final task = await dbHelper.getTaskById(taskId);
+  if (task == null || task.customInterval == null) return;
 
+  // Calculate new notification time based on original interval
+  final now = DateTime.now();
+  final originalNotificationTime = DateTime.fromMillisecondsSinceEpoch(task.notificationTime!);
+  Duration interval;
+  
+  // Determine interval based on task type
+  if (task.durationType == 'Days') {
+    interval = Duration(days: task.customInterval!);
+  } else if (task.durationType == 'Hours') {
+    interval = Duration(hours: task.customInterval!);
+  } else {
+    interval = Duration(minutes: task.customInterval!);
+  }
 
+  // Calculate next notification time maintaining the original schedule
+  DateTime nextNotificationTime = originalNotificationTime;
+  while (nextNotificationTime.isBefore(now)) {
+    nextNotificationTime = nextNotificationTime.add(interval);
+  }
 
+  // Update task in database
+  await dbHelper.updateTask(task.copyWith(
+    notificationTime: nextNotificationTime.millisecondsSinceEpoch,
+  ));
 
-    static Future<void> rescheduleTask(int taskId) async {
-    final dbHelper = DatabaseHelper();
-    final task = await dbHelper.getTaskById(taskId);
-    if (task == null || task.customInterval == null) return;
-
-    // Calculate new notification time based on the interval
-    final newNotificationTime = DateTime.now()
-        .add(Duration(days: task.customInterval!))
-        .millisecondsSinceEpoch;
-
-    // Update task in database
-    await dbHelper.updateTask(task.copyWith(
-      notificationTime: newNotificationTime,
-    ));
-
-    // Reschedule notification
-    await scheduleNotification(task.copyWith(
-      notificationTime: newNotificationTime,
-    ));
-    }
-
+  // Reschedule notification
+  await scheduleNotification(task.copyWith(
+    notificationTime: nextNotificationTime.millisecondsSinceEpoch,
+  ));
+}
     static Future<void> stopTask(int taskId) async {
     final dbHelper = DatabaseHelper();
     await dbHelper.updateTask(

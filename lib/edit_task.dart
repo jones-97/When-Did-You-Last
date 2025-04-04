@@ -163,13 +163,13 @@ class _EditTaskState extends State<EditTask> {
     return;
   }
 
-  if (_selectedDurationType == 'hours' && _hoursController.text.isNotEmpty) {
+  if (_selectedDurationType == 'Hours' && _hoursController.text.isNotEmpty) {
     int hours = int.tryParse(_hoursController.text) ?? 0;
     if (hours > 0) {
       _notificationTime = DateTime.now().add(Duration(hours: hours)).millisecondsSinceEpoch;
     }
   } 
-  else if (_selectedDurationType == 'days' && _daysController.text.isNotEmpty) {
+  else if (_selectedDurationType == 'Days' && _daysController.text.isNotEmpty) {
     int days = int.tryParse(_daysController.text) ?? 0;
     if (days > 0) {
       _notificationTime = DateTime.now().add(Duration(days: days)).millisecondsSinceEpoch;
@@ -396,7 +396,7 @@ class _EditTaskState extends State<EditTask> {
                     
                   if (_selectedTaskType != "No Alert/Tracker") ... [
                       SwitchListTile(
-                      title: Text("Pause Notifications?"),
+                      title: Text("Disable Task?"),
                       value: _notificationsPaused,
                       onChanged: (value) {
                         setState(() {

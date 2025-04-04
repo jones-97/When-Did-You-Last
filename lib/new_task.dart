@@ -24,7 +24,7 @@ class _NewTaskState extends State<NewTask> {
 
   final TextEditingController _hoursController = TextEditingController();
   final TextEditingController _daysController = TextEditingController();
- // TimeOfDay? _defaultTaskTime;
+  // TimeOfDay? _defaultTaskTime;
   DateTime? _selectedDate;
 
 /*
@@ -66,54 +66,56 @@ class _NewTaskState extends State<NewTask> {
 */
 
 // Update the _pickDate method to include time picking
-Future<void> _pickDateTime(BuildContext context) async {
-  final DateTime? pickedDate = await showDatePicker(
-    context: context,
-    initialDate: DateTime.now(),
-    firstDate: DateTime.now(),
-    lastDate: DateTime(2100),
-  );
-  
-  if (pickedDate != null) {
-    final TimeOfDay? pickedTime = await showTimePicker(
+  Future<void> _pickDateTime(BuildContext context) async {
+    final DateTime? pickedDate = await showDatePicker(
       context: context,
-      initialTime: TimeOfDay.now(),
+      initialDate: DateTime.now(),
+      firstDate: DateTime.now(),
+      lastDate: DateTime(2100),
     );
 
-    if (pickedTime != null) {
-      setState(() {
-        _selectedDate = DateTime(
-          pickedDate.year,
-          pickedDate.month,
-          pickedDate.day,
-          pickedTime.hour,
-          pickedTime.minute,
-        );
-        debugPrint("The selected date in pickedDateTime function $_selectedDate");
-        selectedDateString = DateFormat('MMM dd, yyyy - hh:mm a').format(_selectedDate!);
-      });
+    if (pickedDate != null) {
+      final TimeOfDay? pickedTime = await showTimePicker(
+        context: context,
+        initialTime: TimeOfDay.now(),
+      );
+
+      if (pickedTime != null) {
+        setState(() {
+          _selectedDate = DateTime(
+            pickedDate.year,
+            pickedDate.month,
+            pickedDate.day,
+            pickedTime.hour,
+            pickedTime.minute,
+          );
+          debugPrint(
+              "The selected date in pickedDateTime function $_selectedDate");
+          selectedDateString =
+              DateFormat('MMM dd, yyyy - hh:mm a').format(_selectedDate!);
+        });
+      }
     }
   }
-}
 
 // Update the calculateDateTime method
-void calculateDateTime() {
-  if (_selectedDate != null) {
-    _selectedTime = _selectedDate!.millisecondsSinceEpoch;
-    return;
-  }
+  void calculateDateTime() {
+    if (_selectedDate != null) {
+      _selectedTime = _selectedDate!.millisecondsSinceEpoch;
+      return;
+    }
 
-  if (_hoursController.text.isNotEmpty) {
-    int hours = int.parse(_hoursController.text);
-    DateTime nextNotificationTime = DateTime.now().add(Duration(hours: hours));
-    _selectedTime = nextNotificationTime.millisecondsSinceEpoch;
-  } 
-  else if (_daysController.text.isNotEmpty) {
-    int days = int.parse(_daysController.text);
-    DateTime nextNotificationTime = DateTime.now().add(Duration(days: days));
-    _selectedTime = nextNotificationTime.millisecondsSinceEpoch;
+    if (_hoursController.text.isNotEmpty) {
+      int hours = int.parse(_hoursController.text);
+      DateTime nextNotificationTime =
+          DateTime.now().add(Duration(hours: hours));
+      _selectedTime = nextNotificationTime.millisecondsSinceEpoch;
+    } else if (_daysController.text.isNotEmpty) {
+      int days = int.parse(_daysController.text);
+      DateTime nextNotificationTime = DateTime.now().add(Duration(days: days));
+      _selectedTime = nextNotificationTime.millisecondsSinceEpoch;
+    }
   }
-}
 
 /*
   Future<void> _saveTask() async {
@@ -162,75 +164,80 @@ void calculateDateTime() {
 */
 
 // In the _saveTask method:
-Future<void> _saveTask() async {
-  int? custom_interval;
+  Future<void> _saveTask() async {
+    int? custom_interval;
 
-  if (_selectedDurationType == "Specific" && _selectedDate == null) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text("Please select a date and time")),
-    );
-    return;
-  }
+    if (_selectedDurationType == "Specific" && _selectedDate == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Please select a date and time")),
+      );
+      return;
+    }
 
-  // Calculate notification time based on selection
-  if (_selectedDurationType == "Hours" && _hoursController.text.isNotEmpty) {
-    _selectedTime = DateTime.now()
-        .add(Duration(hours: int.parse(_hoursController.text)))
-        .millisecondsSinceEpoch;
-  } 
-  else if (_selectedDurationType == "Days" && _daysController.text.isNotEmpty) {
-    _selectedTime = DateTime.now()
-        .add(Duration(days: int.parse(_daysController.text)))
-        .millisecondsSinceEpoch;
-  } 
-  else if (_selectedDurationType == "Specific" && _selectedDate != null) {
-    _selectedTime = _selectedDate!.millisecondsSinceEpoch;
-  } 
-  else {
-    _selectedTime = null;
-  }
+    // Calculate notification time based on selection
+
+    int? notificationTime;
+
+    if (_selectedDurationType == "Hours" && _hoursController.text.isNotEmpty) {
+      notificationTime = DateTime.now()
+          .add(Duration(hours: int.parse(_hoursController.text)))
+          .millisecondsSinceEpoch;
+    } else if (_selectedDurationType == "Days" &&
+        _daysController.text.isNotEmpty) {
+      notificationTime = DateTime.now()
+          .add(Duration(days: int.parse(_daysController.text)))
+          .millisecondsSinceEpoch;
+    } else if (_selectedDurationType == "Specific" && _selectedDate != null) {
+      notificationTime = _selectedDate!.millisecondsSinceEpoch;
+    } else {
+      notificationTime = null;
+    }
 
     if (_selectedDurationType == 'Hours' && _hoursController.text.isNotEmpty) {
-    custom_interval = int.tryParse(_hoursController.text);
-  } 
-  else if (_selectedDurationType == 'Days' && _daysController.text.isNotEmpty) {
-    custom_interval = int.tryParse(_daysController.text);
+      custom_interval = int.tryParse(_hoursController.text);
+    } else if (_selectedDurationType == 'Days' &&
+        _daysController.text.isNotEmpty) {
+      custom_interval = int.tryParse(_daysController.text);
+    }
+
+    final task = Task(
+      name: _nameController.text,
+      details: _showDetails ? _detailsController.text : null,
+      taskType: _selectedTaskType,
+      durationType: _selectedDurationType ?? "None",
+      customInterval: custom_interval ?? 0,
+      notificationTime: notificationTime,
+      notificationsPaused: false,
+    );
+
+    final id = await DatabaseHelper().insertTask(task);
+    debugPrint("New task's id is $id");
+
+    // First insert the task to get the auto-generated ID
+
+    // Now update the task with the generated ID
+    final taskWithId = task.copyWith(id: id);
+
+    // Schedule notification with the actual ID
+    // if (taskWithId.notificationTime != null) {
+    //   await NotificationHelper.scheduleTaskNotification(taskWithId);
+    // }
+
+    // Schedule notification
+    if (!kIsWeb && taskWithId.notificationTime != null) {
+      try {
+        
+        await NotificationHelper.scheduleNotification(taskWithId);
+      } catch (e) {
+        debugPrint("Error scheduling notification: $e");
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content:
+                Text("Task saved but notification failed: ${e.toString()}")));
+      }
+    }
+
+    Navigator.pop(context, true);
   }
-
-  final task = Task(
-    name: _nameController.text,
-    details: _showDetails ? _detailsController.text : null,
-    taskType: _selectedTaskType,
-    durationType: _selectedDurationType ?? "None",
-    customInterval: custom_interval ?? 0,
-    notificationTime: _selectedTime,
-    notificationsPaused: false,
-  );
-
-  final id = await DatabaseHelper().insertTask(task);
-
-   // First insert the task to get the auto-generated ID
-  
-  
-  // Now update the task with the generated ID
-  final taskWithId = task.copyWith(id: id);
-  
-  // Schedule notification with the actual ID
-  // if (taskWithId.notificationTime != null) {
-  //   await NotificationHelper.scheduleTaskNotification(taskWithId);
-  // }
-
-   //SCHEDULE NOTIFICATION
-  if (!kIsWeb) {
-      if (task.taskType != "No Alert/Tracker" && task.notificationTime != null) {
-    await NotificationHelper.scheduleNotification(taskWithId);
-  }
-  }
-
-  Navigator.pop(context, true);
-
- 
-}
 
   @override
   Widget build(BuildContext context) {
@@ -299,7 +306,6 @@ Future<void> _saveTask() async {
                 isDense: false,
               ),
             ),
-
             Padding(
               padding: EdgeInsets.all(16.0),
               child: Column(
