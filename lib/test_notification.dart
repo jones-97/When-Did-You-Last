@@ -12,7 +12,7 @@ class TestNotificationScreen extends StatefulWidget {
 class _TestNotificationScreenState extends State<TestNotificationScreen> {
   // Create test tasks with proper IDs (use negative numbers for test IDs)
   final onceTask = Task(
-    id: -1, // Temporary test ID
+    id: 200, // Temporary test ID
     name: "Test One-Time",
     taskType: "One-Time",
     durationType: "Minutes",
@@ -21,7 +21,7 @@ class _TestNotificationScreenState extends State<TestNotificationScreen> {
   );
 
   final repeatTask = Task(
-    id: -2, // Temporary test ID
+    id: 202, // Temporary test ID
     name: "Test Repetitive",
     taskType: "Repetitive",
     durationType: "Minutes",

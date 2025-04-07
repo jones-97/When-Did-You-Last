@@ -22,6 +22,7 @@ import 'Util/notifications_helper.dart';
 import 'home_page.dart'; // Import the new home.dart file
 
 late SharedPreferences prefs;
+
 //late var _notificationsPlugin;
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
@@ -65,6 +66,7 @@ void handleNotificationResponse(String payload) async {
   }
 }
 
+
 /*
 Future<void> _requestNotificationPermission() async {
   if (await Permission.notification.isDenied) {
@@ -86,7 +88,11 @@ void main() async {
     //  bool isDarkMode = prefs.getBool('darkMode') ?? false;
 
     if (!kIsWeb) {
-      await Workmanager().initialize(callbackDispatcher);
+      await NotificationHelper.init();
+      await Workmanager().initialize(callbackDispatcher, isInDebugMode: true);
+
+      //CHANGE THE 'true' IN THE ABOVE TO FALSE WHEN READY
+
       await _requestNotificationPermission();
       await _requestExactAlarmPermission();
       _requestBatteryOptimization();
@@ -104,7 +110,7 @@ void main() async {
       //Ensures IndexedDB is properly used because of persistence issues (remembering data) on the web
     }
 
-    await NotificationHelper.init();
+    
 
 //  await _testNotification();
 
@@ -131,8 +137,16 @@ Future<void> _requestBatteryOptimization() async {
 }
 
 void callbackDispatcher() {
-  Workmanager().executeTask((task, inputData) {
+  Workmanager().executeTask((task, inputData) async {
     // Keep background service alive
+       int? taskId = inputData?['taskId'];
+    if (taskId != null) {
+      final dbHelper = DatabaseHelper();
+      final task = await dbHelper.getTaskById(taskId);
+      if (task != null) {
+        await NotificationHelper.scheduleNotification(task);
+      }
+    }
     return Future.value(true);
   });
 }

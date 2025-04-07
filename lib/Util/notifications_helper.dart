@@ -5,6 +5,7 @@ import 'package:timezone/data/latest_all.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/material.dart';
+import 'package:workmanager/workmanager.dart';
 import '../Util/database_helper.dart';
 import '../Models/task.dart';
 
@@ -86,8 +87,8 @@ Scheduling Notification:
 """);
 
   // For testing, allow negative IDs
-  if (task.id == null || task.id! > 0) {
-    debugPrint("Task ID must be set (can use negative numbers for testing)");
+  if (task.id == null || task.id! < 0) {
+    debugPrint("Task ID must be set and positive");
     return;
   }
 
@@ -132,6 +133,19 @@ Scheduling Notification:
 
   try {
     if (isRepetitive) {
+      await Workmanager().registerPeriodicTask(
+  "repeating_task_${task.id}",
+  "repeatingTask",
+  frequency: task.durationType == "Hours"
+      ? Duration(hours: task.customInterval ?? 1)
+      : Duration(days: task.customInterval ?? 1),
+  inputData: {
+    'taskId': task.id,
+  },
+  constraints: Constraints(
+    networkType: NetworkType.not_required,
+  ),
+);
       await _notificationsPlugin.zonedSchedule(
         task.id!,
         task.name,
@@ -235,6 +249,8 @@ static Future<void> rescheduleTask(int taskId) async {
         notificationsPaused: true,
       ),
     );
+    // await Workmanager().cancelByUniqueName("repeating_task_$taskId");
+
     await cancelNotification(taskId);
   }
 
