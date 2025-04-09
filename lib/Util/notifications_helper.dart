@@ -10,7 +10,6 @@ import 'package:workmanager/workmanager.dart';
 import '../Util/database_helper.dart';
 import '../Models/task.dart';
 
-
 @pragma('vm:entry-point')
 void notificationTapBackground(NotificationResponse response) async {
   debugPrint("Background notification action: ${response.actionId}");
@@ -25,14 +24,16 @@ void notificationTapBackground(NotificationResponse response) async {
 }
 
 class NotificationHelper {
-  
+  static bool _isInitialized = false;
+
 
   static final FlutterLocalNotificationsPlugin _notificationsPlugin =
       FlutterLocalNotificationsPlugin();
 
-  
-
   static Future<void> init() async {
+    if (_isInitialized) return;
+
+
     final prefs = await SharedPreferences.getInstance();
     String? toneUri = prefs.getString('selectedRingtoneUri');
 
@@ -88,6 +89,8 @@ class NotificationHelper {
         .resolvePlatformSpecificImplementation<
             AndroidFlutterLocalNotificationsPlugin>()
         ?.createNotificationChannel(channel);
+
+        _isInitialized = true;
   }
 
   static Future<void> scheduleNotification(Task task) async {
@@ -162,34 +165,33 @@ Scheduling Notification:
 
     try {
       if (isRepetitive) {
-        Duration frequency;
+        if (task.autoRepeat) {
+          // Automatic repeating - use Workmanager
+          Duration frequency;
+          switch (task.durationType) {
+            case "Minutes":
+              frequency = Duration(minutes: max(task.customInterval ?? 15, 15));
+              break;
+            case "Hours":
+              frequency = Duration(hours: task.customInterval ?? 1);
+              break;
+            case "Days":
+              frequency = Duration(days: task.customInterval ?? 1);
+              break;
+            default:
+              frequency = Duration(hours: 1);
+          }
 
-        switch (task.durationType) {
-    case "Minutes":
-      // For intervals <15 mins, use minimum 15 mins and handle actual timing in notification
-      frequency = Duration(minutes: max(task.customInterval ?? 15, 15));
-      break;
-    case "Hours":
-      frequency = Duration(hours: task.customInterval ?? 1);
-      break;
-    case "Days":
-      frequency = Duration(days: task.customInterval ?? 1);
-      break;
-    default:
-      frequency = Duration(hours: 1);
-  }
-
-        await Workmanager().registerPeriodicTask(
-          "repeating_task_${task.id}",
-          "repeatingTask",
-          frequency: frequency,
-          inputData: {
-            'taskId': task.id,
-          },
-          constraints: Constraints(
-            networkType: NetworkType.not_required,
-          ),
-        );
+          await Workmanager().registerPeriodicTask(
+            "repeating_task_${task.id}",
+            "repeatingTask",
+            frequency: frequency,
+            inputData: {'taskId': task.id},
+            constraints: Constraints(networkType: NetworkType.not_required),
+          );
+        }
+        // For manual repeat, don't register with Workmanager
+        // Just schedule the single notification
 
         await _notificationsPlugin.zonedSchedule(
           task.id!,
@@ -226,135 +228,145 @@ Scheduling Notification:
     }
   }
 
+  static Future<void> _handleNotificationAction(
+      NotificationResponse response) async {
+    final notificationId = response.id;
+    if (notificationId != null) {
+      await _notificationsPlugin.cancel(notificationId);
+    }
 
-static Future<void> _handleNotificationAction(NotificationResponse response) async {
-  final notificationId = response.id;
-if (notificationId != null) {
-  await _notificationsPlugin.cancel(notificationId);
-}
+    debugPrint("Foreground notification action: ${response.actionId}");
 
-  debugPrint("Foreground notification action: ${response.actionId}");
+    if (response.notificationResponseType ==
+            NotificationResponseType.selectedNotificationAction &&
+        response.actionId != null &&
+        response.id != null) {
+      // ✅ Immediately cancel to ensure the tile disappears
+      await _notificationsPlugin.cancel(response.id!);
+    }
 
-  if (response.notificationResponseType == NotificationResponseType.selectedNotificationAction &&
-      response.actionId != null &&
-      response.id != null) {
-    // ✅ Immediately cancel to ensure the tile disappears
-    await _notificationsPlugin.cancel(response.id!);
-  }
+    final payload = response.payload;
+    if (payload == null) return;
 
-  final payload = response.payload;
-  if (payload == null) return;
+    final taskId = int.tryParse(payload);
+    if (taskId == null) return;
 
-  final taskId = int.tryParse(payload);
-  if (taskId == null) return;
+    final db = DatabaseHelper();
+    final task = await db.getTaskById(taskId);
+    if (task == null) return;
 
-  final db = DatabaseHelper();
-  final task = await db.getTaskById(taskId);
-  if (task == null) return;
+    switch (response.actionId) {
+      case 'ok_action':
+        await cancelNotification(taskId);
+        debugPrint("User acknowledged task $taskId");
+        break;
 
-  switch (response.actionId) {
-    case 'ok_action':
-      debugPrint("User acknowledged task $taskId");
+      case 'continue_action':
+        // ✅ Repeat logic (assumes task is repetitive and not paused)
+//       if (task.taskType == 'Repetitive' && !task.notificationsPaused) {
+//         final nextTime = DateTime.now().add(Duration(
+//           hours: task.durationType == 'Hours' ? task.customInterval! : 0,
+//           days: task.durationType == 'Days' ? task.customInterval! : 0,
+//         ));
+
+//         final updated = task.copyWith(notificationTime: nextTime.millisecondsSinceEpoch);
+//         await db.updateTask(updated);
+//         await scheduleNotification(updated);
+//       }
+
+//       if (payload == 'continue') {
+//   Task? task = await DatabaseHelper().getTaskById(taskId);
+//   if (task != null) {
+//     // Schedule the next instance
+//     await NotificationHelper.scheduleNotification(task);
+//   }
+// }
+        if (task.taskType == 'Repetitive' && !task.notificationsPaused) {
+          if (!task.autoRepeat) {
+            // Only reschedule if user confirms (autoRepeat is false)
+            final nextTime = DateTime.now().add(Duration(
+              hours: task.durationType == 'Hours' ? task.customInterval! : 0,
+              days: task.durationType == 'Days' ? task.customInterval! : 0,
+            ));
+
+            final updated = task.copyWith(
+                notificationTime: nextTime.millisecondsSinceEpoch);
+            await db.updateTask(updated);
+            await scheduleNotification(updated);
+          }
+          // If autoRepeat is true, Workmanager will handle it
+        }
+        break;
+
+      case 'stop_action':
+        // Cancel both notification and Workmanager
+      await cancelNotification(taskId);
+      await Workmanager().cancelByUniqueName("repeating_task_$taskId");
+      await db.updateTask(task.copyWith(notificationsPaused: true));
       break;
 
-    case 'continue_action':
-      // ✅ Repeat logic (assumes task is repetitive and not paused)
-      if (task.taskType == 'Repetitive' && !task.notificationsPaused) {
-        final nextTime = DateTime.now().add(Duration(
-          hours: task.durationType == 'Hours' ? task.customInterval! : 0,
-          days: task.durationType == 'Days' ? task.customInterval! : 0,
-        ));
-
-        final updated = task.copyWith(notificationTime: nextTime.millisecondsSinceEpoch);
-        await db.updateTask(updated);
-        await scheduleNotification(updated);
-      }
-
-      if (payload == 'continue') {
-  Task? task = await DatabaseHelper().getTaskById(taskId);
-  if (task != null) {
-    // Schedule the next instance
-    await NotificationHelper.scheduleNotification(task);
+      default:
+        debugPrint("Unknown action: ${response.actionId}");
+    }
   }
-}
-
-      
-      break;
-
-    case 'stop_action':
-      final paused = task.copyWith(notificationsPaused: true);
-      await db.updateTask(paused);
-      break;
-
-    default:
-      debugPrint("Unknown action: ${response.actionId}");
-  }
-}
-
 
   static Future<void> rescheduleTask(int taskId) async {
-    
     try {
-
       await cancelNotification(taskId);
 
+      final dbHelper = DatabaseHelper();
+      final task = await dbHelper.getTaskById(taskId);
+      if (task == null || task.customInterval == null) return;
 
-    final dbHelper = DatabaseHelper();
-    final task = await dbHelper.getTaskById(taskId);
-    if (task == null || task.customInterval == null) return;
+      // Calculate new notification time based on original interval
+      final now = DateTime.now();
+      final originalNotificationTime =
+          DateTime.fromMillisecondsSinceEpoch(task.notificationTime!);
+      Duration interval;
 
-    // Calculate new notification time based on original interval
-    final now = DateTime.now();
-    final originalNotificationTime =
-        DateTime.fromMillisecondsSinceEpoch(task.notificationTime!);
-    Duration interval;
+      // Determine interval based on task type
+      if (task.durationType == 'Days') {
+        interval = Duration(days: task.customInterval!);
+      } else if (task.durationType == 'Hours') {
+        interval = Duration(hours: task.customInterval!);
+      } else {
+        interval = Duration(minutes: task.customInterval!);
+      }
 
-    // Determine interval based on task type
-    if (task.durationType == 'Days') {
-      interval = Duration(days: task.customInterval!);
-    } else if (task.durationType == 'Hours') {
-      interval = Duration(hours: task.customInterval!);
-    } else {
-      interval = Duration(minutes: task.customInterval!);
+      // Calculate next notification time maintaining the original schedule
+      DateTime nextNotificationTime = originalNotificationTime;
+      while (nextNotificationTime.isBefore(now)) {
+        nextNotificationTime = nextNotificationTime.add(interval);
+      }
+
+      // Update task in database
+      await dbHelper.updateTask(task.copyWith(
+        notificationTime: nextNotificationTime.millisecondsSinceEpoch,
+      ));
+
+      // Reschedule notification
+      await scheduleNotification(task.copyWith(
+        notificationTime: nextNotificationTime.millisecondsSinceEpoch,
+      ));
+    } catch (e) {
+      debugPrint("Error in rescheduleTask: $e");
     }
-
-    // Calculate next notification time maintaining the original schedule
-    DateTime nextNotificationTime = originalNotificationTime;
-    while (nextNotificationTime.isBefore(now)) {
-      nextNotificationTime = nextNotificationTime.add(interval);
-    }
-
-    // Update task in database
-    await dbHelper.updateTask(task.copyWith(
-      notificationTime: nextNotificationTime.millisecondsSinceEpoch,
-    ));
-
-    // Reschedule notification
-    await scheduleNotification(task.copyWith(
-      notificationTime: nextNotificationTime.millisecondsSinceEpoch,
-    ));
-  } catch (e) {
-     debugPrint("Error in rescheduleTask: $e");
-  }
   }
 
   static Future<void> stopTask(int taskId) async {
-    try{
+    try {
       await cancelNotification(taskId);
 
-       final dbHelper = DatabaseHelper();
-    await dbHelper.updateTask(
-      (await dbHelper.getTaskById(taskId))!.copyWith(
-        notificationsPaused: true,
-      ),
-    );
-    // await Workmanager().cancelByUniqueName("repeating_task_$taskId");
-
+      final dbHelper = DatabaseHelper();
+      await dbHelper.updateTask(
+        (await dbHelper.getTaskById(taskId))!.copyWith(
+          notificationsPaused: true,
+        ),
+      );
+      // await Workmanager().cancelByUniqueName("repeating_task_$taskId");
     } catch (e) {
       debugPrint("Error stoping the task from notification: $e");
     }
-   
-    
   }
 
   static Future<void> markTaskAsDone(int taskId) async {
@@ -382,6 +394,45 @@ if (notificationId != null) {
 
   static Future<void> cancelAllNotifications() async {
     await _notificationsPlugin.cancelAll();
+  }
+
+  static Future<void> _rescheduleRepetitiveTask(int taskId) async {
+    final dbHelper = DatabaseHelper();
+    final task = await dbHelper.getTaskById(taskId);
+
+    if (task == null || task.taskType != "Repetitive") return;
+
+    // Calculate next occurrence based on original interval
+    final nextTime = DateTime.fromMillisecondsSinceEpoch(task.notificationTime!)
+        .add(task.durationType == "Hours"
+            ? Duration(hours: task.customInterval ?? 1)
+            : Duration(days: task.customInterval ?? 1));
+
+    // Update task with new time
+    await dbHelper.updateTask(task.copyWith(
+      notificationTime: nextTime.millisecondsSinceEpoch,
+    ));
+
+    // Schedule the next notification
+    await scheduleNotification(task.copyWith(
+      notificationTime: nextTime.millisecondsSinceEpoch,
+    ));
+  }
+
+  static Future<void> _cancelRepetitiveTask(int taskId) async {
+    // Cancel the notification
+    await cancelNotification(taskId);
+
+    // Cancel the Workmanager background task
+    await Workmanager().cancelByUniqueName("repeating_task_$taskId");
+
+    // Update database (optional - mark as inactive instead of deleting)
+    final dbHelper = DatabaseHelper();
+    await dbHelper.updateTask(
+      (await dbHelper.getTaskById(taskId))!.copyWith(
+        notificationsPaused: true, // Add this field to your Task model
+      ),
+    );
   }
 
   static Future<void> requestNotificationPermissions(
@@ -430,16 +481,17 @@ if (notificationId != null) {
   }
 
   Future<void> _sendPayloadTestNotification() async {
-  final testTask = Task(
-    id: 2 * DateTime.now().millisecondsSinceEpoch.remainder(100000),
-    name: "Test Notification",
-    taskType: "One-Time",
-    durationType: "Minutes",
-    notificationTime: DateTime.now().add(Duration(seconds: 10)).millisecondsSinceEpoch,
-  );
-  
-  await NotificationHelper.scheduleNotification(testTask);
-}
+    final testTask = Task(
+      id: 2 * DateTime.now().millisecondsSinceEpoch.remainder(100000),
+      name: "Test Notification",
+      taskType: "One-Time",
+      durationType: "Minutes",
+      notificationTime:
+          DateTime.now().add(Duration(seconds: 10)).millisecondsSinceEpoch,
+    );
+
+    await NotificationHelper.scheduleNotification(testTask);
+  }
 }
 
 // static Future<void> scheduleTaskNotification(Task task) async {

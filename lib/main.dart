@@ -136,14 +136,17 @@ void callbackDispatcher() {
     try {
       // Keep background service alive
       int? taskId = inputData?['taskId'];
+      
       if (taskId != null) {
-        final dbHelper = DatabaseHelper();
-        final task = await dbHelper.getTaskById(taskId);
-        if (task != null) {
-          await NotificationHelper.scheduleNotification(task);
-        }
+      final task = await DatabaseHelper().getTaskById(taskId);
+      if (task != null && 
+          task.autoRepeat && 
+          !task.notificationsPaused) {
+        await NotificationHelper.scheduleNotification(task);
       }
-      return Future.value(true);
+    }
+    return Future.value(true);
+  
     } catch (e) {
       debugPrint("Running background task with workmanager failed: $e");
       return Future.error(e);

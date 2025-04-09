@@ -228,6 +228,7 @@ class _NewTaskState extends State<NewTask> {
     // Schedule notification
     if (!kIsWeb && taskWithId.notificationTime != null) {
       try {
+        // 1. First ensure notifications are initialized
         
         await NotificationHelper.scheduleNotification(taskWithId);
       } catch (e) {
