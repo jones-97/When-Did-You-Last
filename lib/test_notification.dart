@@ -3,7 +3,6 @@ import 'Util/notifications_helper.dart';
 // import 'package:flutter/foundation.dart' show kIsWeb;
 import 'Models/task.dart';
 
-
 class TestNotificationScreen extends StatefulWidget {
   @override
   _TestNotificationScreenState createState() => _TestNotificationScreenState();
@@ -16,7 +15,8 @@ class _TestNotificationScreenState extends State<TestNotificationScreen> {
     name: "Test One-Time",
     taskType: "One-Time",
     durationType: "Minutes",
-    notificationTime: DateTime.now().add(Duration(seconds: 20)).millisecondsSinceEpoch,
+    notificationTime:
+        DateTime.now().add(Duration(seconds: 20)).millisecondsSinceEpoch,
     customInterval: 1,
   );
 
@@ -25,20 +25,28 @@ class _TestNotificationScreenState extends State<TestNotificationScreen> {
     name: "Test Repetitive",
     taskType: "Repetitive",
     durationType: "Minutes",
-    notificationTime: DateTime.now().add(Duration(seconds: 25)).millisecondsSinceEpoch,
+    notificationTime:
+        DateTime.now().add(Duration(seconds: 25)).millisecondsSinceEpoch,
     customInterval: 1,
+  );
+
+  final payloadTask = Task(
+    id: 302,
+    name: "Test Notification",
+    taskType: "One-Time",
+    durationType: "Minutes",
+    notificationTime:
+        DateTime.now().add(Duration(seconds: 10)).millisecondsSinceEpoch,
   );
 
   Future<void> _sendOneTimeNotification() async {
     try {
       await NotificationHelper.scheduleNotification(onceTask);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("One-time notification scheduled!"))
-      );
+          SnackBar(content: Text("One-time notification scheduled!")));
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Error: ${e.toString()}"))
-      );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text("Error: ${e.toString()}")));
     }
   }
 
@@ -46,12 +54,22 @@ class _TestNotificationScreenState extends State<TestNotificationScreen> {
     try {
       await NotificationHelper.scheduleNotification(repeatTask);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Repetitive notification scheduled!"))
-      );
+          SnackBar(content: Text("Repetitive notification scheduled!")));
     } catch (e) {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text("Error: ${e.toString()}")));
+    }
+  }
+
+  Future<void> _sendPayloadNotification() async {
+    try {
+      await NotificationHelper.scheduleNotification(payloadTask);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Error: ${e.toString()}"))
-      );
+          SnackBar(content: Text("Payload test notification scheduled!")));
+    } catch (e) {
+      debugPrint("Error scheduling payload notification: $e");
+      ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Error with payload: ${e.toString()}")));
     }
   }
 
@@ -59,7 +77,7 @@ class _TestNotificationScreenState extends State<TestNotificationScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Test Notification"), 
+        title: const Text("Test Notification"),
         backgroundColor: const Color.fromARGB(255, 196, 126, 28),
       ),
       body: Center(
@@ -77,6 +95,11 @@ class _TestNotificationScreenState extends State<TestNotificationScreen> {
               onPressed: _sendRepetitiveNotification,
               child: const Text("Send Repetitive Notification"),
             ),
+            SizedBox(height: 20),
+            MaterialButton(
+                color: const Color.fromARGB(255, 171, 134, 29),
+                onPressed: _sendPayloadNotification,
+                child: const Text("Send payload notification")),
           ],
         ),
       ),

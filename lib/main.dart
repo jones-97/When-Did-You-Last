@@ -41,10 +41,6 @@ final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 */
 
 Future<void> _requestNotificationPermission() async {
-  
-
-
-
   if (await Permission.notification.isDenied) {
     await Permission.notification.request();
   }
@@ -54,18 +50,18 @@ void handleNotificationResponse(String payload) async {
   List<String> parts = payload.split(":");
   int taskId = int.parse(parts[1]);
 
+  // Cancel the notification first so it disappears
+  await NotificationHelper.cancelNotification(taskId); // <-- Add this line
+
   if (parts[0] == "STOP") {
-    // await DatabaseHelper().updateTaskNotificationStatus(taskId, 1); // Pause notifications
     await NotificationHelper.cancelNotification(taskId);
   } else if (parts[0] == "CONTINUE") {
-    //   await DatabaseHelper().updateTaskNotificationStatus(taskId, 0); // Resume notifications
     Task? task = await DatabaseHelper().getTaskById(taskId);
     if (task != null) {
       await NotificationHelper.scheduleNotification(task);
     }
   }
 }
-
 
 /*
 Future<void> _requestNotificationPermission() async {
@@ -89,7 +85,8 @@ void main() async {
 
     if (!kIsWeb) {
       await NotificationHelper.init();
-      await Workmanager().initialize(callbackDispatcher, isInDebugMode: true);
+
+      await Workmanager().initialize(callbackDispatcher, isInDebugMode: false);
 
       //CHANGE THE 'true' IN THE ABOVE TO FALSE WHEN READY
 
@@ -109,8 +106,6 @@ void main() async {
       databaseFactory = databaseFactoryFfiWeb;
       //Ensures IndexedDB is properly used because of persistence issues (remembering data) on the web
     }
-
-    
 
 //  await _testNotification();
 
@@ -138,16 +133,21 @@ Future<void> _requestBatteryOptimization() async {
 
 void callbackDispatcher() {
   Workmanager().executeTask((task, inputData) async {
-    // Keep background service alive
-       int? taskId = inputData?['taskId'];
-    if (taskId != null) {
-      final dbHelper = DatabaseHelper();
-      final task = await dbHelper.getTaskById(taskId);
-      if (task != null) {
-        await NotificationHelper.scheduleNotification(task);
+    try {
+      // Keep background service alive
+      int? taskId = inputData?['taskId'];
+      if (taskId != null) {
+        final dbHelper = DatabaseHelper();
+        final task = await dbHelper.getTaskById(taskId);
+        if (task != null) {
+          await NotificationHelper.scheduleNotification(task);
+        }
       }
+      return Future.value(true);
+    } catch (e) {
+      debugPrint("Running background task with workmanager failed: $e");
+      return Future.error(e);
     }
-    return Future.value(true);
   });
 }
 

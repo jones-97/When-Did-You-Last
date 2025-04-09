@@ -46,6 +46,7 @@ class DatabaseHelper {
     details TEXT,
     task_type TEXT NOT NULL,
     duration_type TEXT,
+    auto_repeat INTEGER DEFAULT 0,
     custom_interval INTEGER DEFAULT NULL, 
     notification_time INTEGER DEFAULT 0,
     notifications_paused INTEGER DEFAULT 0

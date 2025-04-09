@@ -27,6 +27,7 @@ class _EditTaskState extends State<EditTask> {
   String? _selectedTaskType = "No Alert/Tracker";
   String? _selectedDurationType;
   bool _showDetails = false;
+  bool _autoRepeat = false;
   DateTime? _selectedDate;
   String? selectedDateString;
   int? _notificationTime;
@@ -44,8 +45,9 @@ class _EditTaskState extends State<EditTask> {
     _daysController = TextEditingController();
 
   _nameController.text = widget.task.name;
+  _selectedTaskType = widget.task.taskType;
   _detailsController.text = widget.task.details ?? '';
-
+  _autoRepeat = widget.task.autoRepeat;
 
     _initializeNotificationSettings();
     
@@ -197,6 +199,7 @@ class _EditTaskState extends State<EditTask> {
       details: _showDetails ? _detailsController.text : null,
       taskType: _selectedTaskType!,
       durationType: _selectedDurationType ?? "None",
+      autoRepeat:  _autoRepeat,
       notificationTime: _notificationTime,
       notificationsPaused: _notificationsPaused,
       customInterval: customInterval ?? 0, //stores original interval value eg 1 hour, 2 days
@@ -367,6 +370,13 @@ class _EditTaskState extends State<EditTask> {
                     ],
 
                     SizedBox(height: 16),
+                    if (_selectedTaskType == 'Repetitive') 
+                        SwitchListTile(
+                          title: Text("Enable auto-repetition?"),
+                          subtitle: Text("Clicking this option will have the task automatically rescheduled regardless of pressing the 'Continue' notification button"),
+                          value: _autoRepeat, 
+                          onChanged: (value) => setState(() => _autoRepeat = value)
+                          ),
 
                     Row(
                       children: [

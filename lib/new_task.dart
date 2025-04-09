@@ -18,6 +18,7 @@ class _NewTaskState extends State<NewTask> {
   String? _selectedDurationType;
   int? _selectedTime;
   bool _showDetails = false;
+  bool _autoRepeat = false;
   String? selectedDateString;
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _detailsController = TextEditingController();
@@ -205,6 +206,7 @@ class _NewTaskState extends State<NewTask> {
       details: _showDetails ? _detailsController.text : null,
       taskType: _selectedTaskType,
       durationType: _selectedDurationType ?? "None",
+      autoRepeat: _autoRepeat,
       customInterval: custom_interval ?? 0,
       notificationTime: notificationTime,
       notificationsPaused: false,
@@ -392,6 +394,13 @@ class _NewTaskState extends State<NewTask> {
                         if (_selectedDurationType == "Specific") ...[
                           Text("Selected Date Picked: $selectedDateString")
                         ],
+                        if (_selectedTaskType == 'Repetitive') 
+                        SwitchListTile(
+                          title: Text("Enable auto-repetition?"),
+                          subtitle: Text("Clicking this option will have the task automatically rescheduled regardless of pressing the 'Continue' notification button"),
+                          value: _autoRepeat, 
+                          onChanged: (value) => setState(() => _autoRepeat = value)
+                          )
                       ],
                     ),
                   ],

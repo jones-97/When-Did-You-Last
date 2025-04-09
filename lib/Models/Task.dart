@@ -4,6 +4,7 @@ class Task {
   String? details;
   String taskType; //No Alert/Tracker, One-Time, Repetitive
   String durationType; //None, Minutes, Hours, Days, Specific
+  bool autoRepeat; //0 or 1, false or true (Respectively)
   int? customInterval; // Nullable, for specifically-time reminders; future possible implementation
   int? notificationTime; //to store EXACT values tasks due dates and times; a store for specific task types
   bool notificationsPaused;
@@ -15,6 +16,7 @@ class Task {
     this.details,
     required this.taskType,
     required this.durationType,
+    this.autoRepeat = false,
     this.customInterval,
     this.notificationTime,
     this.notificationsPaused = false,
@@ -28,6 +30,7 @@ class Task {
       'details': details,
       'task_type': taskType,
       'duration_type': durationType,
+      'auto_repeat' : autoRepeat ? 1 : 0,
       'custom_interval': customInterval,
       'notification_time': notificationTime,
       'notifications_paused': notificationsPaused ? 1 : 0,
@@ -42,6 +45,7 @@ class Task {
       details: map['details'],
       taskType: map['task_type'],
       durationType: map['duration_type'],
+      autoRepeat: map['auto_repeat'] == 1,
       customInterval: map['custom_interval'],
       notificationTime: map['notification_time'],
       notificationsPaused: map['notifications_paused'] == 1,
@@ -54,6 +58,7 @@ class Task {
     String? details,
     String? taskType,
     String? durationType,
+    bool? autoRepeat,
     int? notificationTime,
     bool? notificationsPaused,
     int? customInterval,
@@ -64,6 +69,7 @@ class Task {
       details: details ?? this.details,
       taskType: taskType ?? this.taskType,
       durationType: durationType ?? this.durationType,
+      autoRepeat: autoRepeat ?? this.autoRepeat,
       notificationTime: notificationTime ?? this.notificationTime,
       notificationsPaused: notificationsPaused ?? this.notificationsPaused,
       customInterval: customInterval ?? this.customInterval,
