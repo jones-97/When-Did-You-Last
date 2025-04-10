@@ -168,6 +168,21 @@ class _NewTaskState extends State<NewTask> {
   Future<void> _saveTask() async {
     int? custom_interval;
 
+    if (_selectedTaskType != "No Alert/Tracker") {
+      bool hasNoDays = _daysController.text.trim().isEmpty;
+      bool hasNoHours = _hoursController.text.trim().isEmpty;
+      bool hasNoDate = _selectedDate == null;
+
+      if (hasNoDays && hasNoHours && hasNoDate) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+              content: Text(
+                  "Please provide a reminder value (hours, days, or date/time).")),
+        );
+        return; // Prevent saving
+      }
+    }
+
     if (_selectedDurationType == "Specific" && _selectedDate == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Please select a date and time")),
@@ -229,7 +244,7 @@ class _NewTaskState extends State<NewTask> {
     if (!kIsWeb && taskWithId.notificationTime != null) {
       try {
         // 1. First ensure notifications are initialized
-        
+
         await NotificationHelper.scheduleNotification(taskWithId);
       } catch (e) {
         debugPrint("Error scheduling notification: $e");
@@ -395,13 +410,14 @@ class _NewTaskState extends State<NewTask> {
                         if (_selectedDurationType == "Specific") ...[
                           Text("Selected Date Picked: $selectedDateString")
                         ],
-                        if (_selectedTaskType == 'Repetitive') 
-                        SwitchListTile(
-                          title: Text("Enable auto-repetition?"),
-                          subtitle: Text("Clicking this option will have the task automatically rescheduled regardless of pressing the 'Continue' notification button"),
-                          value: _autoRepeat, 
-                          onChanged: (value) => setState(() => _autoRepeat = value)
-                          )
+                        if (_selectedTaskType == 'Repetitive')
+                          SwitchListTile(
+                              title: Text("Enable auto-repetition?"),
+                              subtitle: Text(
+                                  "Clicking this option will have the task automatically rescheduled regardless of pressing the 'Continue' notification button"),
+                              value: _autoRepeat,
+                              onChanged: (value) =>
+                                  setState(() => _autoRepeat = value))
                       ],
                     ),
                   ],

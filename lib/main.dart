@@ -84,7 +84,7 @@ void main() async {
     //  bool isDarkMode = prefs.getBool('darkMode') ?? false;
 
     if (!kIsWeb) {
-      await NotificationHelper.init();
+      // await NotificationHelper.init();
 
       await Workmanager().initialize(callbackDispatcher, isInDebugMode: false);
 
@@ -134,19 +134,23 @@ Future<void> _requestBatteryOptimization() async {
 void callbackDispatcher() {
   Workmanager().executeTask((task, inputData) async {
     try {
+      WidgetsFlutterBinding.ensureInitialized();
+      tz.initializeTimeZones();
+
+      // Initialize notifications plugin in this isolate
+      
+      await NotificationHelper.initializeForBackground();
+
       // Keep background service alive
       int? taskId = inputData?['taskId'];
-      
+
       if (taskId != null) {
-      final task = await DatabaseHelper().getTaskById(taskId);
-      if (task != null && 
-          task.autoRepeat && 
-          !task.notificationsPaused) {
-        await NotificationHelper.scheduleNotification(task);
+        final task = await DatabaseHelper().getTaskById(taskId);
+        if (task != null && task.autoRepeat && !task.notificationsPaused) {
+          await NotificationHelper.scheduleNotification(task);
+        }
       }
-    }
-    return Future.value(true);
-  
+      return Future.value(true);
     } catch (e) {
       debugPrint("Running background task with workmanager failed: $e");
       return Future.error(e);

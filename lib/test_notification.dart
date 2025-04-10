@@ -25,6 +25,7 @@ class _TestNotificationScreenState extends State<TestNotificationScreen> {
     name: "Test Repetitive",
     taskType: "Repetitive",
     durationType: "Minutes",
+    autoRepeat: false,
     notificationTime:
         DateTime.now().add(Duration(seconds: 25)).millisecondsSinceEpoch,
     customInterval: 1,
@@ -35,8 +36,9 @@ class _TestNotificationScreenState extends State<TestNotificationScreen> {
     name: "Test Notification",
     taskType: "One-Time",
     durationType: "Minutes",
+    autoRepeat: true,
     notificationTime:
-        DateTime.now().add(Duration(seconds: 10)).millisecondsSinceEpoch,
+        DateTime.now().add(Duration(minutes: 16)).millisecondsSinceEpoch,
   );
 
   Future<void> _sendOneTimeNotification() async {

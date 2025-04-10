@@ -1,6 +1,6 @@
 import 'dart:math';
 import 'dart:typed_data';
-
+import 'dart:convert';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/data/latest_all.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
@@ -12,26 +12,85 @@ import '../Models/task.dart';
 
 @pragma('vm:entry-point')
 void notificationTapBackground(NotificationResponse response) async {
-  debugPrint("Background notification action: ${response.actionId}");
+  debugPrint("✅ Background action received: ${response.actionId}");
 
-  // Always cancel the notification first
   if (response.id != null) {
     final plugin = FlutterLocalNotificationsPlugin();
     await plugin.cancel(response.id!);
   }
 
-  // Optionally: queue work for later
+  final payload = response.payload;
+  if (payload == null) return;
+
+  try {
+    final Map<String, dynamic> data = jsonDecode(payload);
+    final int taskId = data['taskId'];
+
+    final db = DatabaseHelper();
+    final task = await db.getTaskById(taskId);
+
+    if (task == null) return;
+
+    switch (response.actionId) {
+      case 'continue_action':
+        debugPrint("📆 Background: Rescheduling task $taskId");
+
+        if (!task.autoRepeat && task.taskType == "Repetitive") {
+          final nextTime = DateTime.now().add(Duration(
+            hours: task.durationType == 'Hours' ? task.customInterval ?? 1 : 0,
+            days: task.durationType == 'Days' ? task.customInterval ?? 1 : 0,
+          ));
+
+          final updated = task.copyWith(notificationTime: nextTime.millisecondsSinceEpoch);
+
+          await db.updateTask(updated);
+          await NotificationHelper.scheduleNotification(updated);
+        }
+        break;
+
+      case 'stop_action':
+        debugPrint("⛔ Background: Stopping task $taskId");
+
+        await db.updateTask(task.copyWith(notificationsPaused: true));
+        await Workmanager().cancelByUniqueName("repeating_task_$taskId");
+        break;
+
+      default:
+        debugPrint("⚠️ Unknown action in background: ${response.actionId}");
+    }
+  } catch (e) {
+    debugPrint("❌ Background handler error: $e");
+  }
 }
+
 
 class NotificationHelper {
   static bool _isInitialized = false;
+  static FlutterLocalNotificationsPlugin? _notificationsPlugin;
 
 
-  static final FlutterLocalNotificationsPlugin _notificationsPlugin =
-      FlutterLocalNotificationsPlugin();
+  
 
   static Future<void> init() async {
     if (_isInitialized) return;
+    await _initializeImpl();
+    _isInitialized = true;
+  }
+
+   // Special initialization for background isolates
+  @pragma('vm:entry-point')
+  static Future<void> initializeForBackground() async {
+    if (_isInitialized) return;
+    await _initializeImpl();
+    _isInitialized = true;
+  }
+
+
+  static Future<void> _initializeImpl() async {
+
+    
+
+    _notificationsPlugin = FlutterLocalNotificationsPlugin();
 
 
     final prefs = await SharedPreferences.getInstance();
@@ -51,9 +110,9 @@ class NotificationHelper {
       iOS: iOSInitSettings,
     );
 
-    await _notificationsPlugin.initialize(
+    await _notificationsPlugin!.initialize(
       initSettings,
-      onDidReceiveNotificationResponse: _handleNotificationAction,
+      onDidReceiveNotificationResponse: handleNotificationAction,
       onDidReceiveBackgroundNotificationResponse: notificationTapBackground,
       // (NotificationResponse response) async
       // {
@@ -85,7 +144,7 @@ class NotificationHelper {
       sound: toneUri != null ? UriAndroidNotificationSound(toneUri) : null,
     );
 
-    await _notificationsPlugin
+    await _notificationsPlugin!
         .resolvePlatformSpecificImplementation<
             AndroidFlutterLocalNotificationsPlugin>()
         ?.createNotificationChannel(channel);
@@ -94,7 +153,13 @@ class NotificationHelper {
   }
 
   static Future<void> scheduleNotification(Task task) async {
+    if (!_isInitialized) {
+        await init();
+      }
+
     if (task.notificationTime == null) return;
+    assert(_notificationsPlugin != null, 
+      'NotificationHelper must be initialized before use');
 
     debugPrint("""
 Scheduling Notification:
@@ -111,14 +176,14 @@ Scheduling Notification:
     }
 
     // Create a payload map containing all necessary task info
-    final payload = {
-      'taskId': task.id.toString(),
-      'taskType': task.taskType,
-      'durationType': task.durationType,
-      'customInterval': task.customInterval?.toString(),
-    };
+    final payloadString = jsonEncode({
+  'taskId': task.id,
+  'taskType': task.taskType,
+  'durationType': task.durationType,
+  'customInterval': task.customInterval,
+});
 
-    final payloadString = payload.toString();
+   
 
     final isRepetitive = task.taskType == "Repetitive";
     final scheduledTime =
@@ -163,6 +228,7 @@ Scheduling Notification:
                     ),
                   ]);
 
+    
     try {
       if (isRepetitive) {
         if (task.autoRepeat) {
@@ -193,7 +259,7 @@ Scheduling Notification:
         // For manual repeat, don't register with Workmanager
         // Just schedule the single notification
 
-        await _notificationsPlugin.zonedSchedule(
+        await _notificationsPlugin!.zonedSchedule(
           task.id!,
           task.name,
           task.details ?? 'Task reminder',
@@ -211,7 +277,7 @@ Scheduling Notification:
           // },
         );
       } else {
-        await _notificationsPlugin.zonedSchedule(
+        await _notificationsPlugin!.zonedSchedule(
           task.id!,
           task.name,
           task.details ?? 'Task reminder',
@@ -228,11 +294,11 @@ Scheduling Notification:
     }
   }
 
-  static Future<void> _handleNotificationAction(
+  static Future<void> handleNotificationAction(
       NotificationResponse response) async {
     final notificationId = response.id;
     if (notificationId != null) {
-      await _notificationsPlugin.cancel(notificationId);
+      await _notificationsPlugin!.cancel(notificationId);
     }
 
     debugPrint("Foreground notification action: ${response.actionId}");
@@ -242,26 +308,42 @@ Scheduling Notification:
         response.actionId != null &&
         response.id != null) {
       // ✅ Immediately cancel to ensure the tile disappears
-      await _notificationsPlugin.cancel(response.id!);
+      await _notificationsPlugin!.cancel(response.id!);
     }
 
-    final payload = response.payload;
-    if (payload == null) return;
+  final payload = response.payload;
+if (payload == null) return;
 
-    final taskId = int.tryParse(payload);
-    if (taskId == null) return;
+Map<String, dynamic> data;
+try {
+  data = jsonDecode(payload);
+} catch (e) {
+  debugPrint("Error decoding JSON payload: $e");
+  return;
+}
+
+final int? taskId = data['taskId'];
+if (taskId == null) {
+  debugPrint("Missing taskId in payload.");
+  return;
+}
+
+
+
 
     final db = DatabaseHelper();
-    final task = await db.getTaskById(taskId);
+    final task = await db.getTaskById(taskId!);
     if (task == null) return;
 
     switch (response.actionId) {
       case 'ok_action':
+        debugPrint("PRESSED OK IN NOTIFICATIONS!");
         await cancelNotification(taskId);
         debugPrint("User acknowledged task $taskId");
         break;
 
       case 'continue_action':
+      debugPrint("PRESSED CONTINUE IN NOTIFICATIONS!");
         // ✅ Repeat logic (assumes task is repetitive and not paused)
 //       if (task.taskType == 'Repetitive' && !task.notificationsPaused) {
 //         final nextTime = DateTime.now().add(Duration(
@@ -299,6 +381,7 @@ Scheduling Notification:
         break;
 
       case 'stop_action':
+      debugPrint("PRESSED STOP IN NOTIFICATIONS!");
         // Cancel both notification and Workmanager
       await cancelNotification(taskId);
       await Workmanager().cancelByUniqueName("repeating_task_$taskId");
@@ -389,11 +472,11 @@ Scheduling Notification:
   }
 
   static Future<void> cancelNotification(int id) async {
-    await _notificationsPlugin.cancel(id);
+    await _notificationsPlugin!.cancel(id);
   }
 
   static Future<void> cancelAllNotifications() async {
-    await _notificationsPlugin.cancelAll();
+    await _notificationsPlugin!.cancelAll();
   }
 
   static Future<void> _rescheduleRepetitiveTask(int taskId) async {
@@ -439,7 +522,7 @@ Scheduling Notification:
       BuildContext context) async {
     if (Theme.of(context).platform == TargetPlatform.android) {
       final AndroidFlutterLocalNotificationsPlugin? androidPlugin =
-          _notificationsPlugin.resolvePlatformSpecificImplementation<
+          _notificationsPlugin!.resolvePlatformSpecificImplementation<
               AndroidFlutterLocalNotificationsPlugin>();
 
       if (androidPlugin != null) {
@@ -471,7 +554,7 @@ Scheduling Notification:
       android: androidDetails,
     );
 
-    await _notificationsPlugin.show(
+    await _notificationsPlugin!.show(
       0, // Use 0 as ID for test notifications
       'Test Notification',
       'This is a test notification to verify your app notifications are working',

@@ -180,6 +180,22 @@ class _EditTaskState extends State<EditTask> {
 }
 
   Future<void> _updateTask() async {
+
+    if (_selectedTaskType != "No Alert/Tracker") {
+      bool hasNoDays = _daysController.text.trim().isEmpty;
+      bool hasNoHours = _hoursController.text.trim().isEmpty;
+      bool hasNoDate = _selectedDate == null;
+
+      if (hasNoDays && hasNoHours && hasNoDate) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+              content: Text(
+                  "Please provide a reminder value (hours, days, or date/time).")),
+        );
+        return; // Prevent saving
+      }
+    }
+    
   try {
     calculateDateTime();
 
