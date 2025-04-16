@@ -1,3 +1,4 @@
+import 'package:awesome_notifications/awesome_notifications.dart';
 import 'package:flutter/material.dart';
 // import 'Data/database_helper.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
@@ -10,6 +11,7 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:android_intent_plus/android_intent.dart';
 import 'package:android_intent_plus/flag.dart';
+import 'package:when_did_you_last/intro_permissions.dart';
 import 'package:workmanager/workmanager.dart';
 // import 'dart:io';
 // import 'package:when_did_you_last/settings.dart';
@@ -17,11 +19,12 @@ import 'package:provider/provider.dart';
 import 'Models/task.dart';
 import 'Util/theme_provider.dart';
 import 'Util/database_helper.dart';
-import 'Util/notifications_helper.dart';
+import 'Util/notifications_helper_old.dart';
+import 'Util/notification_helper.dart';
 // import 'dart:io';
 import 'home_page.dart'; // Import the new home.dart file
 
-late SharedPreferences prefs;
+late final SharedPreferences prefs;
 
 //late var _notificationsPlugin;
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
@@ -78,28 +81,39 @@ void main() async {
     //   sqfliteFfiInit();
     // }
 
-    WidgetsFlutterBinding
-        .ensureInitialized(); // Ensures Flutter is fully initialized
+    WidgetsFlutterBinding.ensureInitialized(); 
+    // Ensures Flutter is fully initialized
     // prefs = await SharedPreferences.getInstance();
     //  bool isDarkMode = prefs.getBool('darkMode') ?? false;
+    prefs = await SharedPreferences.getInstance();
+    final introShown = prefs.getBool('intro_shown') ?? false;
 
     if (!kIsWeb) {
-      // await NotificationHelper.init();
+    
+
+      tz.initializeTimeZones();
+
+      await NotificationHelper.init();
+    
+
+
+      
 
       await Workmanager().initialize(callbackDispatcher, isInDebugMode: false);
 
       //CHANGE THE 'true' IN THE ABOVE TO FALSE WHEN READY
 
+      //Request PERMISSIONS:
+
       await _requestNotificationPermission();
-      await _requestExactAlarmPermission();
+      await _checkExactAlarmPermission();
+    //  await _requestExactAlarmPermission();
       _requestBatteryOptimization();
     }
 
     // Initialize the database before running the app
     // final dbHelper = DatabaseHelper();
     // await dbHelper.database;
-
-    tz.initializeTimeZones();
 
     if (kIsWeb) {
       // running on the web!
@@ -110,7 +124,7 @@ void main() async {
 //  await _testNotification();
 
     runApp(ChangeNotifierProvider(
-        create: (context) => ThemeProvider(), child: const MyApp()));
+        create: (context) => ThemeProvider(), child: MyApp(showIntro: !introShown)));
   } catch (e) {
     debugPrint("Problem initializing the whole app:  $e");
   }
@@ -124,13 +138,14 @@ Future<void> _requestBatteryOptimization() async {
     const intent = AndroidIntent(
       action: 'android.settings.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS',
       data:
-          'package:com.example.yourapp', // ✅ Replace with your app's package name
+          'package:com.example.when_did_you_last', // ✅ Replace with your app's package name
       flags: <int>[Flag.FLAG_ACTIVITY_NEW_TASK],
     );
     await intent.launch();
   }
 }
 
+@pragma('vm:entry-point')
 void callbackDispatcher() {
   Workmanager().executeTask((task, inputData) async {
     try {
@@ -148,6 +163,8 @@ void callbackDispatcher() {
         final task = await DatabaseHelper().getTaskById(taskId);
         if (task != null && task.autoRepeat && !task.notificationsPaused) {
           await NotificationHelper.scheduleNotification(task);
+          debugPrint("📡 WorkMANAGER periodic task SET FROM MAIN with WorkManager for task ${task.id}");
+
         }
       }
       return Future.value(true);
@@ -158,8 +175,25 @@ void callbackDispatcher() {
   });
 }
 
+Future<void> _checkExactAlarmPermission() async {
+  if (await AwesomeNotifications().isNotificationAllowed() == false) {
+    await AwesomeNotifications().requestPermissionToSendNotifications();
+  }
+  
+  
+  if (await DeviceInfoPlugin().androidInfo.then((info) => info.version.sdkInt) >= 31) {
+    if (!await AwesomeNotifications().isNotificationAllowed()) {
+      const intent = AndroidIntent(
+        action: 'android.settings.REQUEST_SCHEDULE_EXACT_ALARM',
+      );
+      await intent.launch();
+    }
+  }
+}
+
+//NOT SURE IF WE USE THIS METHOD
 Future<void> _requestExactAlarmPermission() async {
-  final prefs = await SharedPreferences.getInstance();
+  // prefs = await SharedPreferences.getInstance();
   bool isAlarmPermissionGranted =
       prefs.getBool('alarmPermissionGranted') ?? false;
 
@@ -204,32 +238,9 @@ Future<int> getAndroidSdkVersion() async {
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({super.key});
-
-  /*
-
-  @override
-  _MyAppState createState() => _MyAppState();
-}
-
-class _MyAppState extends State<MyApp> {
-  late bool _isDarkMode;
-
-  @override
-  void initState() {
-    super.initState();
-    _isDarkMode = widget.isDarkMode;
-  }
-
-  void _toggleDarkMode(bool value) async {
-    final prefs = await SharedPreferences.getInstance();
-    prefs.setBool('darkMode', value);
-
-    setState(() {
-      _isDarkMode = value;
-    });
-  }
-*/
+  
+    final bool showIntro;
+  const MyApp({super.key, required this.showIntro});
 
   @override
   Widget build(BuildContext context) {
@@ -241,7 +252,7 @@ class _MyAppState extends State<MyApp> {
         theme: ThemeData.light(),
         darkTheme: ThemeData.dark(),
         themeMode: themeProvider.isDarkMode ? ThemeMode.dark : ThemeMode.light,
-        home: const MyHomePage(), // Set HomeScreen as the main screen
+        home: showIntro ? const IntroPermissionsScreen() : const MyHomePage(), // Set HomeScreen as the main screen
       );
     });
   }

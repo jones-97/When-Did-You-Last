@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:table_calendar/table_calendar.dart';
+import 'package:when_did_you_last/intro_permissions.dart';
 import 'package:when_did_you_last/test_notification.dart';
+import 'package:when_did_you_last/tutorial_screen.dart';
 import 'tasks_list.dart';
 import 'settings.dart';
 import 'date_view.dart';
@@ -74,12 +76,27 @@ class _MyHomePageState extends State<MyHomePage> {
                 );
               }
 
+              else if (value == 'permissions') {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => const IntroPermissionsScreen(),
+        ),
+      );
+    }
+    else if (value == 'tutorial') {
+      Navigator.push(
+          context, MaterialPageRoute(builder: (_) => const TutorialScreen()));
+    }
+
               
             },
             itemBuilder: (context) => [
               const PopupMenuItem(value: 'Task View', child: Text('Task View')),
               const PopupMenuItem(value: 'Settings', child: Text('Settings')),
-                  const PopupMenuItem(value: 'Test Notification', child: Text('Test Notification')), // ✅ New item
+                  const PopupMenuItem(value: 'Test Notification', child: Text('Test Notification')),
+                  const PopupMenuItem(value: 'permissions', child: Text('Permissions Setup'),), 
+                  const PopupMenuItem(value: 'tutorial', child: Text('How to Use'), ),// ✅ New item
             ],
           ),
         ],

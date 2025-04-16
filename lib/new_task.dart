@@ -1,11 +1,12 @@
 // import 'dart:ffi';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:when_did_you_last/Util/notifications_helper.dart';
+import 'package:when_did_you_last/Util/notifications_helper_old.dart';
 import 'Util/database_helper.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'Models/task.dart';
 // import 'Util/notifications_helper.dart';
+import 'Util/notification_helper.dart';
 // import 'package:shared_preferences/shared_preferences.dart';
 
 class NewTask extends StatefulWidget {

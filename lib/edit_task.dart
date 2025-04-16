@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'Models/task.dart';
 import 'Util/database_helper.dart';
-import 'Util/notifications_helper.dart';
+import 'Util/notifications_helper_old.dart';
+import 'Util/notification_helper.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 
 class EditTask extends StatefulWidget {

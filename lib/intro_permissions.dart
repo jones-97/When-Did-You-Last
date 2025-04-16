@@ -4,6 +4,9 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:android_intent_plus/android_intent.dart';
 import 'dart:io' show Platform;
 
+import 'package:when_did_you_last/home_page.dart';
+import 'package:when_did_you_last/tutorial_screen.dart';
+
 class IntroPermissionsScreen extends StatefulWidget {
   const IntroPermissionsScreen({super.key});
 
@@ -65,10 +68,16 @@ class _IntroPermissionsScreenState extends State<IntroPermissionsScreen> {
   }
 
   Future<void> _completeSetup() async {
+    debugPrint("✅ _completeSetup() called");
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('intro_shown', true);
     if (context.mounted) {
-      Navigator.pushReplacementNamed(context, '/'); // go to home
+     Navigator.pushReplacement(
+  context,
+  MaterialPageRoute(builder: (_) => const TutorialScreen()),
+);
+
+ // go to home
     }
   }
 

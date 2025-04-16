@@ -44,7 +44,7 @@ void notificationTapBackground(NotificationResponse response) async {
           final updated = task.copyWith(notificationTime: nextTime.millisecondsSinceEpoch);
 
           await db.updateTask(updated);
-          await NotificationHelper.scheduleNotification(updated);
+          await NotificationHelper2.scheduleNotification(updated);
         }
         break;
 
@@ -64,7 +64,7 @@ void notificationTapBackground(NotificationResponse response) async {
 }
 
 
-class NotificationHelper {
+class NotificationHelper2 {
   static bool _isInitialized = false;
   static FlutterLocalNotificationsPlugin? _notificationsPlugin;
 
@@ -573,7 +573,7 @@ if (taskId == null) {
           DateTime.now().add(Duration(seconds: 10)).millisecondsSinceEpoch,
     );
 
-    await NotificationHelper.scheduleNotification(testTask);
+    await NotificationHelper2.scheduleNotification(testTask);
   }
 }
 
