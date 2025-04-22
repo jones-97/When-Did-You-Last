@@ -17,10 +17,10 @@ class _DateViewState extends State<DateView> {
   bool _loading = false;
 
   final dbHelper = DatabaseHelper();
-  List<Task> _tasks = [];
-  Map<int, List<String>> _taskCompletionDates =
-      {}; // Track completion dates per task
-  Map<int, bool> _taskCompletionStatus = {}; // Track task completion status
+  List<Task> _trackerTasks = [];
+  List<Task> _reminderTasksCompleted = [];
+  Map<int, List<String>> _taskCompletionDates = {};
+  Map<int, bool> _taskCompletionStatus = {};// Track task completion status
 
   @override
   void initState() {
@@ -28,6 +28,7 @@ class _DateViewState extends State<DateView> {
     _loadTasks();
   }
 
+/*
   Future<void> _loadTasks() async {
     final tasks = await dbHelper.getTasks();
     final filteredTasks = tasks.where((task) {
@@ -54,6 +55,42 @@ class _DateViewState extends State<DateView> {
       };
     });
   }
+*/
+
+
+  Future<void> _loadTasks() async {
+    final allTasks = await dbHelper.getTasks();
+    final todayIsoString = widget.selectedDate.toIso8601String();
+
+    final trackerTasks = <Task>[];
+    final reminderTasks = <Task>[];
+
+    final completionDatesMap = <int, List<String>>{};
+
+    for (var task in allTasks) {
+      final completionDates = await dbHelper.getTaskCompletionDates(task.id!);
+      completionDatesMap[task.id!] = completionDates;
+
+      if (task.taskType == "No Alert/Tracker") {
+        trackerTasks.add(task);
+      } else if ((task.taskType == "One-Time" || task.taskType == "Repetitive") &&
+          completionDates.contains(todayIsoString)) {
+             reminderTasks.add(task);
+      }
+    }
+
+    setState(() {
+      _trackerTasks = trackerTasks;
+      _reminderTasksCompleted = reminderTasks;
+      _taskCompletionDates = completionDatesMap;
+      _taskCompletionStatus = {
+        for (var task in _trackerTasks)
+          task.id!: _taskCompletionDates[task.id!]?.contains(todayIsoString) ?? false
+      };
+    });
+  }
+
+
 
   Future<void> _toggleTaskCompletion(Task task, bool isDone) async {
     final dateString = widget.selectedDate.toIso8601String();
@@ -108,22 +145,63 @@ class _DateViewState extends State<DateView> {
                     "Check a Task as Done today",
                     textAlign: TextAlign.center,
                     style: TextStyle(color: Color.fromARGB(1, 88, 166, 245)),
-                  )),
+                  )
+                  ),
+
               Expanded(
-                child: ListView.builder(
-                  itemCount: _tasks.length,
-                  itemBuilder: (context, index) {
-                    final task = _tasks[index];
-                    return CheckboxListTile(
-                      title: Text(task.name),
-                      value: _taskCompletionStatus[task.id] ?? false,
-                      onChanged: (bool? value) {
-                        _toggleTaskCompletion(task, value ?? false);
-                      },
-                    );
-                  },
+                child: ListView(
+                  children: [
+                  // TRACKER TASKS
+                  ..._trackerTasks.map((task) => CheckboxListTile(
+                        title: Text(task.name),
+                        value: _taskCompletionStatus[task.id] ?? false,
+                        onChanged: (bool? value) {
+                          _toggleTaskCompletion(task, value ?? false);
+                        },
+                      )),
+
+                  // REMINDER TASKS SECTION
+                   if (_reminderTasksCompleted.isNotEmpty) ...[
+                    const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 12.0),
+                      child: Text(
+                        "Reminder Tasks",
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                    ..._reminderTasksCompleted.map((task) => ListTile(
+                          title: Text(task.name),
+                          subtitle: task.details != null ? Text(task.details!) : null,
+                        )),
+                  ],
+
+
+                  // itemCount: _tasks.length,
+                  // itemBuilder: (context, index) {
+                  //   final task = _tasks[index];
+                  //   return CheckboxListTile(
+                  //     title: Text(task.name),
+                  //     value: _taskCompletionStatus[task.id] ?? false,
+                  //     onChanged: (bool? value) {
+                  //       _toggleTaskCompletion(task, value ?? false);
+                  //     },
+                  //   );
+                  // },
+                  ],
+
+
+
                 ),
+
+
+
+
+
               ),
+              
               Padding(
                   padding: const EdgeInsets.fromLTRB(0, 10, 0, 0),
                   child: MaterialButton(

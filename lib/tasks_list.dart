@@ -19,6 +19,7 @@ class _TasksListState extends State<TasksList> {
   List<Task> tasksDueToday = [];
   List<Task> tasksDueInTwoDays = [];
   List<Task> otherTasks = [];
+  List<Task> pastTasks = [];
 
   @override
   void initState() {
@@ -67,7 +68,7 @@ class _TasksListState extends State<TasksList> {
     }
   }
 */
-    Future<void> _loadTasks() async {
+  Future<void> _loadTasks() async {
     try {
       final tasks = await dbHelper.getTasks();
       _categorizeTasks(tasks);
@@ -78,28 +79,50 @@ class _TasksListState extends State<TasksList> {
 
   void _categorizeTasks(List<Task> tasks) {
     final now = DateTime.now();
-    final todayEnd = DateTime(now.year, now.month, now.day).add(const Duration(days: 1));
+    final todayStart = DateTime(now.year, now.month, now.day);
+    final todayEnd = todayStart.add(const Duration(days: 1));
     final tomorrowEnd = todayEnd.add(const Duration(days: 1));
 
     setState(() {
       _tasks = tasks;
-      
+
       tasksDueToday = _tasks.where((task) {
         if (task.notificationTime == null) return false;
-        final taskDate = DateTime.fromMillisecondsSinceEpoch(task.notificationTime!);
+        final taskDate =
+            DateTime.fromMillisecondsSinceEpoch(task.notificationTime!);
         return taskDate.isAfter(now) && taskDate.isBefore(todayEnd);
       }).toList();
 
       tasksDueInTwoDays = _tasks.where((task) {
         if (task.notificationTime == null) return false;
-        final taskDate = DateTime.fromMillisecondsSinceEpoch(task.notificationTime!);
+        final taskDate =
+            DateTime.fromMillisecondsSinceEpoch(task.notificationTime!);
         return taskDate.isAfter(todayEnd) && taskDate.isBefore(tomorrowEnd);
       }).toList();
 
+      /*
       otherTasks = _tasks.where((task) {
         if (task.notificationTime == null) return true;
         final taskDate = DateTime.fromMillisecondsSinceEpoch(task.notificationTime!);
         return taskDate.isAfter(tomorrowEnd) || taskDate.isBefore(now);
+      }).toList();
+      */
+
+      otherTasks = _tasks.where((task) {
+        if (task.notificationTime == null || task.notificationsPaused)
+          return false;
+        final taskDate =
+            DateTime.fromMillisecondsSinceEpoch(task.notificationTime!);
+        return taskDate.isAfter(tomorrowEnd);
+      }).toList();
+
+      /*  pastTasks = _tasks.where((task) => task.notificationsPaused).toList(); */
+      pastTasks = _tasks.where((task) {
+        if (task.notificationsPaused) return true; // 🛑 Stopped manually
+        if (task.notificationTime == null) return false;
+        final taskDate =
+            DateTime.fromMillisecondsSinceEpoch(task.notificationTime!);
+        return taskDate.isBefore(todayStart); // ⏰ Already past due
       }).toList();
     });
   }
@@ -110,26 +133,26 @@ class _TasksListState extends State<TasksList> {
     return DateFormat('MMM dd, yyyy - hh:mm a').format(date);
   }
 
-
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         backgroundColor: const Color(0xff947448),
-        title: const Text(
-          "Tasks View",
-          style: TextStyle(fontWeight: FontWeight.w400, fontSize: 14, color: Color(0xff000000)
-          )
-        ),
+        title: const Text("Tasks View",
+            style: TextStyle(
+                fontWeight: FontWeight.w400,
+                fontSize: 14,
+                color: Color(0xff000000))),
         actions: [
           PopupMenuButton<String>(
             icon: const Icon(Icons.menu, color: Color(0xff212435), size: 24),
             onSelected: (value) {
               if (value == 'Home View') {
-                Navigator.push(context, MaterialPageRoute(builder: (context) => MyHomePage()));
+                Navigator.push(context,
+                    MaterialPageRoute(builder: (context) => MyHomePage()));
               } else if (value == 'Settings') {
-                Navigator.push(context, MaterialPageRoute(builder: (context) => Settings()));
+                Navigator.push(context,
+                    MaterialPageRoute(builder: (context) => Settings()));
               }
             },
             itemBuilder: (context) => [
@@ -147,13 +170,28 @@ class _TasksListState extends State<TasksList> {
             _buildTaskSection("Tasks Due In Two Days", tasksDueInTwoDays),
             const SizedBox(height: 20),
             _buildTaskSection("Other Tasks", otherTasks),
+
+
+            if (pastTasks.isNotEmpty) ...[
+              const Padding(
+                padding: EdgeInsets.all(8.0),
+                child: Text(
+                  'Past Tasks',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+              ),
+              ...pastTasks.map((task) => _buildPastTaskCard(task)).toList(),
+            ],
+
+            
           ],
         ),
       ),
       floatingActionButton: FloatingActionButton(
         backgroundColor: const Color(0xff3ae882),
         onPressed: () {
-          Navigator.push(context, MaterialPageRoute(builder: (context) => NewTask()))
+          Navigator.push(
+                  context, MaterialPageRoute(builder: (context) => NewTask()))
               .then((_) => _loadTasks());
         },
         child: const Icon(Icons.add, color: Colors.white),
@@ -167,7 +205,9 @@ class _TasksListState extends State<TasksList> {
       children: [
         Padding(
           padding: const EdgeInsets.all(8.0),
-          child: Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          child: Text(title,
+              style:
+                  const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
         ),
         if (tasks.isEmpty)
           const Padding(
@@ -186,7 +226,7 @@ class _TasksListState extends State<TasksList> {
       child: ListTile(
         title: Text(task.name),
         subtitle: Text(
-          task.notificationTime != null 
+          task.notificationTime != null
               ? "Due: ${_formatDateTime(task.notificationTime!)}"
               : "No due date",
         ),
@@ -202,28 +242,63 @@ class _TasksListState extends State<TasksList> {
     );
   }
 
-  Widget _buildNotificationStatusIcon(Task task) {
-  // No icon for tasks without alerts
-  if (task.taskType == "No Alert/Tracker") {
-    return const SizedBox.shrink();
+  Widget _buildPastTaskCard(Task task) {
+    return Card(
+      color: Colors.grey[200],
+      child: ListTile(
+        title: Text(
+          task.name,
+          style: const TextStyle(
+            decoration: TextDecoration.lineThrough,
+            color: Colors.black54,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        subtitle: task.details != null
+            ? Text(
+                task.details!,
+                style: const TextStyle(color: Colors.black45),
+              )
+            : null,
+        trailing: const Icon(Icons.check_circle, color: Colors.green),
+        onTap: () async {
+          final updated = await Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => EditTask(task: task),
+            ),
+          );
+
+          if (updated == true) {
+            // After editing, reload tasks to refresh UI
+            _loadTasks();
+          }
+        },
+      ),
+    );
   }
 
-  return Tooltip(
-    message: task.notificationsPaused
-        ? "Notifications paused - edit to enable"
-        : "Reminders active",
-    child: Icon(
-      task.notificationsPaused
-          ? Icons.notifications_off
-          : Icons.notifications_active,
-      color: task.notificationsPaused
-          ? Colors.grey
-          : Theme.of(context).colorScheme.secondary,
-      size: 20,
-    ),
-  );
-}
+  Widget _buildNotificationStatusIcon(Task task) {
+    // No icon for tasks without alerts
+    if (task.taskType == "No Alert/Tracker") {
+      return const SizedBox.shrink();
+    }
 
+    return Tooltip(
+      message: task.notificationsPaused
+          ? "Notifications paused - edit to enable"
+          : "Reminders active",
+      child: Icon(
+        task.notificationsPaused
+            ? Icons.notifications_off
+            : Icons.notifications_active,
+        color: task.notificationsPaused
+            ? Colors.grey
+            : Theme.of(context).colorScheme.secondary,
+        size: 20,
+      ),
+    );
+  }
 
   String _formatDateTime(int timestamp) {
     final date = DateTime.fromMillisecondsSinceEpoch(timestamp);

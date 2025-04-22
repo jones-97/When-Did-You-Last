@@ -1,3 +1,4 @@
+import 'package:device_info_plus/device_info_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_system_ringtones/flutter_system_ringtones.dart';
@@ -130,6 +131,7 @@ class _SettingsState extends State<Settings> {
   }
   }
 
+/*
   void _openAndroidNotificationSettings() async {
     const intent = AndroidIntent(
       action: 'android.settings.CHANNEL_NOTIFICATION_SETTINGS',
@@ -144,6 +146,33 @@ class _SettingsState extends State<Settings> {
     );
     await intent.launch();
   }
+*/
+
+void _openAndroidNotificationSettings() async {
+  final deviceInfo = DeviceInfoPlugin();
+  final androidInfo = await deviceInfo.androidInfo;
+  int sdkInt = androidInfo.version.sdkInt;
+
+  if (sdkInt >= 26) {
+    // Android 8.0+ — can open app notification settings
+    const intent = AndroidIntent(
+      action: 'android.settings.APP_NOTIFICATION_SETTINGS',
+      arguments: <String, dynamic>{
+        'android.provider.extra.APP_PACKAGE': 'com.example.when_did_you_last', // ✅ Your app package
+      },
+      flags: <int>[Flag.FLAG_ACTIVITY_NEW_TASK],
+    );
+    await intent.launch();
+  } else {
+    // Older versions: Just open application details
+    const intent = AndroidIntent(
+      action: 'android.settings.APPLICATION_DETAILS_SETTINGS',
+      data: 'package:com.example.when_did_you_last',
+      flags: <int>[Flag.FLAG_ACTIVITY_NEW_TASK],
+    );
+    await intent.launch();
+  }
+}
 
 
   @override

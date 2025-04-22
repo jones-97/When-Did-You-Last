@@ -252,7 +252,7 @@ class MyApp extends StatelessWidget {
         theme: ThemeData.light(),
         darkTheme: ThemeData.dark(),
         themeMode: themeProvider.isDarkMode ? ThemeMode.dark : ThemeMode.light,
-        home: showIntro ? const IntroPermissionsScreen() : const MyHomePage(), // Set HomeScreen as the main screen
+        home: kIsWeb ? const MyHomePage() : showIntro ? const IntroPermissionsScreen() : const MyHomePage(), // Set HomeScreen as the main screen
       );
     });
   }

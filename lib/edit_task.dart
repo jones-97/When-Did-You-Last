@@ -228,6 +228,9 @@ class _EditTaskState extends State<EditTask> {
   if (!kIsWeb) {
       if (updatedTask.taskType != "No Alert/Tracker" && updatedTask.notificationTime != null) {
     await NotificationHelper.scheduleNotification(updatedTask);
+    ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Task Edited and Rescheduled")),
+      );
   }
   }
 
@@ -423,7 +426,8 @@ class _EditTaskState extends State<EditTask> {
                     
                   if (_selectedTaskType != "No Alert/Tracker") ... [
                       SwitchListTile(
-                      title: Text("Disable Task?"),
+                      title: const Text("Notifications Enabled"),
+                      subtitle: const Text("This is switched on in case the task has been scheduled."),
                       value: _notificationsPaused,
                       onChanged: (value) {
                         setState(() {
