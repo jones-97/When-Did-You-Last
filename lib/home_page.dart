@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:table_calendar/table_calendar.dart';
 import 'package:when_did_you_last/intro_permissions.dart';
+import 'package:when_did_you_last/new_task.dart';
 import 'package:when_did_you_last/test_notification.dart';
 import 'package:when_did_you_last/tutorial_screen.dart';
 import 'tasks_list.dart';
@@ -76,7 +77,7 @@ class _MyHomePageState extends State<MyHomePage> {
                 );
               }
 
-              else if (value == 'permissions') {
+              else if (value == 'Permissions') {
       Navigator.push(
         context,
         MaterialPageRoute(
@@ -84,7 +85,7 @@ class _MyHomePageState extends State<MyHomePage> {
         ),
       );
     }
-    else if (value == 'tutorial') {
+    else if (value == 'Tutorial') {
       Navigator.push(
           context, MaterialPageRoute(builder: (_) => const TutorialScreen()));
     }
@@ -93,10 +94,14 @@ class _MyHomePageState extends State<MyHomePage> {
             },
             itemBuilder: (context) => [
               const PopupMenuItem(value: 'Task View', child: Text('Task View')),
-              const PopupMenuItem(value: 'Settings', child: Text('Settings')),
+              const PopupMenuItem(value: 'Tutorial', child: Text('How to Use'), ),
+              
                   const PopupMenuItem(value: 'Test Notification', child: Text('Test Notification')),
-                  const PopupMenuItem(value: 'permissions', child: Text('Permissions Setup'),), 
-                  const PopupMenuItem(value: 'tutorial', child: Text('How to Use'), ),// ✅ New item
+                  const PopupMenuItem(value: 'Permissions', child: Text('Permissions Setup'),),
+                  const PopupMenuItem(value: 'Settings', child: Text('Settings')),
+                   
+              
+                  // ✅ New item
             ],
           ),
         ],
@@ -185,6 +190,16 @@ class _MyHomePageState extends State<MyHomePage> {
   ),
 ),
       ),
+      
+      ),
+      floatingActionButton: FloatingActionButton(
+        tooltip: "Add new task",
+        backgroundColor: const Color(0xff3ae882),
+        onPressed: () {
+          Navigator.push(
+                  context, MaterialPageRoute(builder: (context) => NewTask()));
+        },
+        child: const Icon(Icons.add, color: Colors.white),
       ),
     );
   }

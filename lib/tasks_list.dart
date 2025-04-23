@@ -16,9 +16,10 @@ class TasksList extends StatefulWidget {
 class _TasksListState extends State<TasksList> {
   final dbHelper = DatabaseHelper();
   List<Task> _tasks = [];
+  List<Task> trackerTasks = [];
   List<Task> tasksDueToday = [];
   List<Task> tasksDueInTwoDays = [];
-  List<Task> otherTasks = [];
+  List<Task> futureTasks = [];
   List<Task> pastTasks = [];
 
   @override
@@ -86,6 +87,8 @@ class _TasksListState extends State<TasksList> {
     setState(() {
       _tasks = tasks;
 
+      trackerTasks = _tasks.where((task) => task.taskType == "No Alert/Tracker").toList();
+
       tasksDueToday = _tasks.where((task) {
         if (task.notificationTime == null) return false;
         final taskDate =
@@ -108,7 +111,7 @@ class _TasksListState extends State<TasksList> {
       }).toList();
       */
 
-      otherTasks = _tasks.where((task) {
+      futureTasks = _tasks.where((task) {
         if (task.notificationTime == null || task.notificationsPaused)
           return false;
         final taskDate =
@@ -166,20 +169,40 @@ class _TasksListState extends State<TasksList> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildTaskSection("Tasks Due Today", tasksDueToday),
-            _buildTaskSection("Tasks Due In Two Days", tasksDueInTwoDays),
-            const SizedBox(height: 20),
-            _buildTaskSection("Other Tasks", otherTasks),
+          _buildSectionTitle("📝 Tracker Tasks", color: Colors.teal),
+          _buildTaskSection("Tracker Tasks", trackerTasks),
+
+          const SizedBox(height: 30),
+
+          _buildSectionTitle("⏰ Reminder Tasks", color: Colors.deepOrange),
+          _buildTaskSection("Tasks Due Today", tasksDueToday),
+          _buildTaskSection("Tasks Due In Two Days", tasksDueInTwoDays),
+          const SizedBox(height: 20),
+          _buildTaskSection("Future Tasks", futureTasks),
+          const SizedBox(height: 30),
+
+
+            // _buildTaskSection("Tasks Due Today", tasksDueToday),
+            // _buildTaskSection("Tasks Due In Two Days", tasksDueInTwoDays),
+            // const SizedBox(height: 20),
+            // _buildTaskSection("Other Tasks", futureTasks),
 
 
             if (pastTasks.isNotEmpty) ...[
+
+              _buildSectionTitle('🗑 Past Tasks', color: Colors.lightGreen),
+              
+              /*
               const Padding(
                 padding: EdgeInsets.all(8.0),
-                child: Text(
+                child: 
+                Text(
                   'Past Tasks',
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
+                
               ),
+              */
               ...pastTasks.map((task) => _buildPastTaskCard(task)).toList(),
             ],
 
@@ -199,6 +222,20 @@ class _TasksListState extends State<TasksList> {
     );
   }
 
+  Widget _buildSectionTitle(String title, {Color color = Colors.black}) {
+  return Padding(
+    padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+    child: Text(
+      title,
+      style: TextStyle(
+        fontSize: 20,
+        fontWeight: FontWeight.bold,
+        color: color,
+      ),
+    ),
+  );
+}
+ 
   Widget _buildTaskSection(String title, List<Task> tasks) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,

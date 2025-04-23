@@ -14,11 +14,13 @@ class DateView extends StatefulWidget {
 }
 
 class _DateViewState extends State<DateView> {
+  
   bool _loading = false;
 
   final dbHelper = DatabaseHelper();
   List<Task> _trackerTasks = [];
-  List<Task> _reminderTasksCompleted = [];
+  List<Task> _reminderTasks = [];
+  List<String> formattedCompletionDates = [];
   Map<int, List<String>> _taskCompletionDates = {};
   Map<int, bool> _taskCompletionStatus = {};// Track task completion status
 
@@ -57,7 +59,7 @@ class _DateViewState extends State<DateView> {
   }
 */
 
-
+/*
   Future<void> _loadTasks() async {
     final allTasks = await dbHelper.getTasks();
     final todayIsoString = widget.selectedDate.toIso8601String();
@@ -90,6 +92,146 @@ class _DateViewState extends State<DateView> {
     });
   }
 
+*/
+
+/*
+  Future<void> _loadTasks() async {
+  final allTasks = await dbHelper.getTasks();
+   final selectedDate = widget.selectedDate;
+  final selectedDateFormatted = DateFormat('yyyy-MM-dd').format(selectedDate);
+
+  // final todayIsoString = widget.selectedDate.toIso8601String();
+
+  // final selectedDay = DateTime(widget.selectedDate.year, widget.selectedDate.month, widget.selectedDate.day);
+  // final todayIsoString = selectedDay.toIso8601String();
+
+  final trackerTasks = <Task>[];
+  final completedReminderTasks = <Task>[];
+ // final upcomingReminderTasks = <Task>[];
+
+  final completionDatesMap = <int, List<String>>{};
+
+  for (var task in allTasks) {
+    final completionDates = await dbHelper.getTaskCompletionDates(task.id!);
+    debugPrint("Completion dates of ALL TASKS: $completionDates");
+
+    
+    completionDatesMap[task.id!] = completionDates;
+
+    // Categorize tasks
+    if (task.taskType == "No Alert/Tracker") {
+      trackerTasks.add(task);
+      final tsize = trackerTasks.length;
+      debugPrint("Tracker tasks total: $tsize");
+    } 
+
+    /*
+    {
+      // Check if this is a completed reminder task
+      if (completionDates.contains(todayIsoString)) {
+        completedReminderTasks.add(task);
+      }
+      // Check if this is an upcoming reminder task
+      else if (task.notificationTime != null && 
+          DateTime.fromMillisecondsSinceEpoch(task.notificationTime!)
+              .isAfter(widget.selectedDate)) {
+        upcomingReminderTasks.add(task);
+      }
+    }
+  }
+  */
+
+  else if (task.notificationTime != null) {
+      // Check all completion dates for matches with selected date
+      bool isCompletedOnDate = completionDates.any((selectedDateFormatted) {
+        try {
+          final date = DateTime.parse(selectedDateFormatted);
+          final formattedDate = DateFormat('yyyy-MM-dd').format(date);
+          return formattedDate == selectedDateFormatted;
+        } catch (e) {
+          return false;
+        }
+      });
+
+      if (isCompletedOnDate) {
+        completedReminderTasks.add(task);
+        final csize = completedReminderTasks.length;
+        debugPrint("Completed tasks of this day TOTAL are: $csize");
+      }
+    }
+  }
+
+setState(() {
+    _trackerTasks = trackerTasks;
+    _reminderTasks = completedReminderTasks;
+    _taskCompletionDates = completionDatesMap;
+    _taskCompletionStatus = {
+      for (var task in _trackerTasks)
+        task.id!: completionDatesMap[task.id!]?.any((dateString) {
+          try {
+            final date = DateTime.parse(dateString);
+            final formattedDate = DateFormat('yyyy-MM-dd').format(date);
+            return formattedDate == selectedDateFormatted;
+          } catch (e) {
+            return false;
+          }
+        }) ?? false
+    };
+  });
+  
+
+  }
+*/ 
+
+  Future<void> _loadTasks() async {
+  final allTasks = await dbHelper.getTasks();
+  final selectedDate = widget.selectedDate;
+  final selectedDateFormatted = DateFormat('yyyy-MM-dd').format(selectedDate);
+
+  final trackerTasks = <Task>[];
+  final completedReminderTasks = <Task>[];
+
+  final completionDatesMap = <int, List<String>>{};
+
+  for (var task in allTasks) {
+    final completionDates = await dbHelper.getTaskCompletionDates(task.id!);
+    completionDatesMap[task.id!] = completionDates;
+
+    if (task.taskType == "No Alert/Tracker") {
+      trackerTasks.add(task);
+    } 
+    else if ((task.taskType == "One-Time" || task.taskType == "Repetitive") &&
+             completionDates.any((dateString) {
+               try {
+                 final date = DateTime.parse(dateString);
+                 final formattedDate = DateFormat('yyyy-MM-dd').format(date);
+                 return formattedDate == selectedDateFormatted;
+               } catch (e) {
+                 return false;
+               }
+             })) {
+      completedReminderTasks.add(task);
+    }
+  }
+
+  setState(() {
+    _trackerTasks = trackerTasks;
+    _reminderTasks = completedReminderTasks;
+    _taskCompletionDates = completionDatesMap;
+    _taskCompletionStatus = {
+      for (var task in _trackerTasks)
+        task.id!: completionDatesMap[task.id!]?.any((dateString) {
+          try {
+            final date = DateTime.parse(dateString);
+            final formattedDate = DateFormat('yyyy-MM-dd').format(date);
+            return formattedDate == selectedDateFormatted;
+          } catch (e) {
+            return false;
+          }
+        }) ?? false
+    };
+  });
+}
 
 
   Future<void> _toggleTaskCompletion(Task task, bool isDone) async {
@@ -137,7 +279,78 @@ class _DateViewState extends State<DateView> {
               },
             ),
           ),
-          body: Column(
+          body: SingleChildScrollView(
+  child: Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      // Tracker Tasks Section
+      const Padding(
+        padding: EdgeInsets.symmetric(vertical: 8.0),
+        child: Text(
+          "▶ Tracker Tasks",
+          style: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            color: Colors.blueAccent,
+          ),
+        ),
+      ),
+      ListView.builder(
+        shrinkWrap: true,
+        physics: NeverScrollableScrollPhysics(),
+        itemCount: _trackerTasks.length,
+        itemBuilder: (context, index) {
+          final task = _trackerTasks[index];
+          return CheckboxListTile(
+            title: Text(task.name),
+            value: _taskCompletionStatus[task.id] ?? false,
+            onChanged: (bool? value) {
+              _toggleTaskCompletion(task, value ?? false);
+            },
+          );
+        },
+      ),
+      const SizedBox(height: 20),
+
+      // Reminder Tasks Section
+      if (_reminderTasks.isNotEmpty) ...[
+        const Padding(
+          padding: EdgeInsets.symmetric(vertical: 8.0),
+          child: Text(
+            "⏲ Reminder Tasks",
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: Colors.green,
+            ),
+          ),
+        ),
+        ListView.builder(
+          shrinkWrap: true,
+          physics: NeverScrollableScrollPhysics(),
+          itemCount: _reminderTasks.length,
+          itemBuilder: (context, index) {
+            final task = _reminderTasks[index];
+            return ListTile(
+              leading: const Icon(Icons.check_circle, color: Colors.green),
+              title: Text(
+                task.name,
+                style: const TextStyle(
+                  decoration: TextDecoration.lineThrough,
+                  color: Colors.grey,
+                ),
+              ),
+            );
+          },
+        ),
+      ],
+    ],
+  ),
+),
+
+          
+          /*
+          Column(
             children: [
               const Padding(
                   padding: EdgeInsets.fromLTRB(0, 10, 0, 0),
@@ -161,7 +374,7 @@ class _DateViewState extends State<DateView> {
                       )),
 
                   // REMINDER TASKS SECTION
-                   if (_reminderTasksCompleted.isNotEmpty) ...[
+                   if (_reminderTasks.isNotEmpty) ...[
                     const Padding(
                       padding: EdgeInsets.symmetric(vertical: 12.0),
                       child: Text(
@@ -172,7 +385,7 @@ class _DateViewState extends State<DateView> {
                         ),
                       ),
                     ),
-                    ..._reminderTasksCompleted.map((task) => ListTile(
+                    ..._reminderTasks.map((task) => ListTile(
                           title: Text(task.name),
                           subtitle: task.details != null ? Text(task.details!) : null,
                         )),
@@ -223,6 +436,14 @@ class _DateViewState extends State<DateView> {
                           }))),
             ],
           ),
-        ));
+        */
+
+        
+        
+        
+        
+        )
+        );
   }
+
 }
