@@ -92,50 +92,75 @@ class TutorialScreen extends StatelessWidget {
   @override
 Widget build(BuildContext context) {
   return Scaffold(
-    appBar: AppBar(title: const Text("How to Use the App")),
+    appBar: AppBar(title: const Text("How to Use the App"), backgroundColor: const Color.fromARGB(255, 249, 232, 191),),
     body: SingleChildScrollView(
       padding: const EdgeInsets.all(20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            "Welcome to 'When Did You Last'?",
+          const Row(children: [
+            const Text(
+            "Welcome to ",
             style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
           ),
+          const Text(
+            "When Did You Last...?",
+            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color.fromARGB(255, 76, 232, 185)),
+          ),
+          ],
+          ),
+          
           const SizedBox(height: 16),
-          const Text("• The following is your menu screen."),
+          const Text("• The following is your home screen.",
+          style: TextStyle(fontSize: 16, fontWeight: FontWeight.normal)),
+
+          const Text("  Click the menu item on the top right to access other options.",
+          style: TextStyle(fontSize: 16, fontWeight: FontWeight.normal)),
           const SizedBox(height: 8),
 
           const SizedBox(height: 20),
-          const Text("• Tap '+' to create a new task wherever you see 'New Task'."),
+          const Text("• Tap '+' to create a new task wherever you see 'New Task'.",
+          style: TextStyle(fontSize: 16, fontWeight: FontWeight.normal)),
           const SizedBox(height: 8),
 
           const SizedBox(height: 20),
-          const Text("• Choose a Task Type: No-Alert/Tracker, One-Time or Repetitive."),
+          const Text("• Choose a Task Type: No-Alert/Tracker, One-Time or Repetitive.",
+          style: TextStyle(fontSize: 16, fontWeight: FontWeight.normal)),
           const SizedBox(height: 8),
 
           const SizedBox(height: 20),
-          const Text("• No-Alert/Tracker tasks act as trackers without notifications."),
+          const Text("• No-Alert/Tracker tasks act as trackers without notifications.",
+          style: TextStyle(fontSize: 16, fontWeight: FontWeight.normal)),
           const SizedBox(height: 8),
 
           const SizedBox(height: 20),
-          const Text("• Provide task details to help you remember."),
+          const Text("• Provide task details to help you remember.",
+          style: TextStyle(fontSize: 16, fontWeight: FontWeight.normal)),
           const SizedBox(height: 8),
 
           const SizedBox(height: 20),
-          const Text("• Access the Settings screen to handle notifications."),
+          const Text("• Access the Settings screen to handle notifications.",
+          style: TextStyle(fontSize: 16, fontWeight: FontWeight.normal)),
           const SizedBox(height: 8),
 
           const SizedBox(height: 20),
-          const Text("• Use the menu to revisit permissions or this tutorial."),
+          const Text("• Use the menu to revisit permissions or this tutorial.",
+          style: TextStyle(fontSize: 16, fontWeight: FontWeight.normal)),
           const SizedBox(height: 30),
 
           Center(
-            child: ElevatedButton(
+            child: MaterialButton(
+               color: const Color(0xff676690),
+                elevation: 2,
+                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      side: BorderSide(color: Color(0xff808080), width: 1),
+                    ),
               onPressed: () {
                 Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const MyHomePage()));
               },
-              child: const Text("Get Started!"),
+              child: const Text("Get Started!", style: TextStyle(color: Colors.white),),
             ),
           ),
         ],

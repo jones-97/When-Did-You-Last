@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'Models/task.dart';
 import 'Util/database_helper.dart';
-import 'Util/notifications_helper_old.dart';
 import 'Util/notification_helper.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 
@@ -270,7 +269,7 @@ class _EditTaskState extends State<EditTask> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: const Color(0xffe8d63a),
+        backgroundColor: const Color(0xff8797b4),
         title: const Text(
           "Edit Task",
           style: TextStyle(
@@ -281,21 +280,21 @@ class _EditTaskState extends State<EditTask> {
         ),
       ),
       ),
+
       body: SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const SizedBox(height: 20),
+
+            Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const Text(
                 "Task Name: ",
-                style: TextStyle(
-                  fontWeight: FontWeight.w400,
-                  fontStyle: FontStyle.normal,
-                  fontSize: 14,
-                  color: Color(0xff000000),
               ),
-              ),
+              const SizedBox(height: 10),
               TextField(
                 controller: _nameController,
                 decoration: const InputDecoration(
@@ -303,12 +302,14 @@ class _EditTaskState extends State<EditTask> {
                   hintText: "Enter task name",
                 ),
               ),
-              Padding(
-                padding: EdgeInsets.all(16.0),
-                child: Column(
+              const SizedBox(height: 16,),
+            ]
+            ),
+            
+            Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text("Task Type"),
+                    const Text("Task Type"),
                     DropdownButton<String>(
                       value: _selectedTaskType,
                       onChanged: (newValue) {
@@ -328,8 +329,10 @@ class _EditTaskState extends State<EditTask> {
                         );
                       }).toList(),
                     ),
+                  ]
+            ),
 
-                    SizedBox(height: 16),
+                    const SizedBox(height: 16),
 
                     if (_selectedTaskType == "One-Time" || _selectedTaskType == "Repetitive") ...[
                       Text("Notification Type"),
@@ -389,7 +392,7 @@ class _EditTaskState extends State<EditTask> {
                       ),
                     ],
 
-                    SizedBox(height: 16),
+                    const SizedBox(height: 16),
                     if (_selectedTaskType == 'Repetitive') 
                         SwitchListTile(
                           title: Text("Enable auto-repetition?"),
@@ -408,12 +411,14 @@ class _EditTaskState extends State<EditTask> {
                             });
                           },
                         ),
-                        Text("Provide more info?"),
+                        const Text("Provide more info?"),
+                        
                       ],
                     ),
-
+                    const SizedBox(height: 16),
                     if (_showDetails) ...[
-                      Text("Details"),
+                      const Text("Details"),
+                      const SizedBox(height: 20),
                       TextField(
                         controller: _detailsController,
                         maxLines: 3,
@@ -439,20 +444,18 @@ class _EditTaskState extends State<EditTask> {
                   ],
                   
 
-                    SizedBox(height: 20),
+                    const SizedBox(height: 20),
 
-                    Padding(
-              padding: const EdgeInsets.fromLTRB(0, 10, 0, 0),
-              child: MaterialButton(
+              MaterialButton(
                 onPressed: _updateTask,
-                color: const Color(0xffffffff),
-                elevation: 0,
-                shape: const RoundedRectangleBorder(
-                  borderRadius: BorderRadius.zero,
-                  side: BorderSide(color: Color(0xff808080), width: 1),
-                ),
-                padding: const EdgeInsets.all(16),
-                textColor: const Color(0xff000000),
+                color: const Color(0xff8797b4),
+                elevation: 2,
+                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      side: BorderSide(color: Color(0xff808080), width: 1),
+                    ),
+                textColor: const Color(0xffffffff),
                 height: 40,
                 minWidth: 140,
                 child: const Text(
@@ -464,18 +467,18 @@ class _EditTaskState extends State<EditTask> {
                   ),
                 ),
               ),
-            ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(0, 10, 0, 0),
-              child: MaterialButton(
+
+              const SizedBox(height: 16),
+            
+            MaterialButton(
                 onPressed: _deleteTask,
-                color: const Color.fromARGB(255, 167, 53, 53),
-                elevation: 0,
-                shape: const RoundedRectangleBorder(
-                  borderRadius: BorderRadius.zero,
-                  side: BorderSide(color: Color(0xff808080), width: 1),
-                ),
-                padding: const EdgeInsets.all(16),
+                color: const Color(0xffc98ca3),
+                elevation: 2,
+                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      side: BorderSide(color: Color(0xff808080), width: 1),
+                    ),
                 textColor: const Color.fromARGB(255, 255, 255, 255),
                 height: 40,
                 minWidth: 140,
@@ -488,15 +491,13 @@ class _EditTaskState extends State<EditTask> {
                   ),
                 ),
               ),
-            ),
+            
                   ],
                 ),
               ),
-            ],
-          ),
-        ),
-      ),
     );
+    
+         
   }
 
   @override

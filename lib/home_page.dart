@@ -49,7 +49,7 @@ class _MyHomePageState extends State<MyHomePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: const Color(0xff3ae882),
+        backgroundColor: const Color.fromARGB(255, 83, 214, 184),
         title: const Text("When Did You Last...?"),
         automaticallyImplyLeading: false,
         actions: [
@@ -143,11 +143,11 @@ class _MyHomePageState extends State<MyHomePage> {
   
   calendarStyle:const CalendarStyle(
   selectedDecoration: BoxDecoration(
-    color: Colors.green, // Force green for selected dates
+    color: Color.fromARGB(255, 115, 239, 182), // Force green for selected dates
     shape: BoxShape.circle,
   ),
   todayDecoration: BoxDecoration(
-    color: Colors.blue, // Keep today's date blue
+    color: Colors.lightBlue, // Keep today's date blue
     shape: BoxShape.circle,
   ),
   defaultDecoration: BoxDecoration(
@@ -170,7 +170,7 @@ class _MyHomePageState extends State<MyHomePage> {
       return Container(
         margin: const EdgeInsets.all(4),
         decoration: BoxDecoration(
-          color: isCompleted ? Colors.green : Colors.transparent,
+          color: isCompleted ? const Color(0xffceebe4) : Colors.transparent,
           shape: BoxShape.circle,
         ),
         child: Center(
@@ -194,7 +194,7 @@ class _MyHomePageState extends State<MyHomePage> {
       ),
       floatingActionButton: FloatingActionButton(
         tooltip: "Add new task",
-        backgroundColor: const Color(0xff3ae882),
+        backgroundColor: const Color.fromARGB(255, 83, 214, 184),
         onPressed: () {
           Navigator.push(
                   context, MaterialPageRoute(builder: (context) => NewTask()));

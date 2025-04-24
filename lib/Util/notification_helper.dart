@@ -12,6 +12,8 @@ import 'package:timezone/timezone.dart' as tz;
 
 class NotificationHelper {
 
+  static bool _initialized = false;
+
   static Future<void> initializeForBackground() async {
     debugPrint("Initialize NOTIFICATIONS FOR BACKGROUND called");
   await AwesomeNotifications().initialize(
@@ -42,6 +44,8 @@ class NotificationHelper {
     },
     onActionReceivedMethod: _onActionReceived,
   );
+
+  _initialized = true;
 }
 
   static Future<void> init() async {

@@ -262,7 +262,7 @@ class _NewTaskState extends State<NewTask> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: const Color(0xffe8d63a),
+        backgroundColor: const Color(0xffe1a6b7),
         title: const Text(
           "New Task",
           style: TextStyle(
@@ -273,21 +273,24 @@ class _NewTaskState extends State<NewTask> {
           ),
         ),
       ),
+      
       body: SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child:
-              Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const SizedBox(height: 20),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+            
+
             const Text(
               "Task Name: ",
-              style: TextStyle(
-                fontWeight: FontWeight.w400,
-                fontStyle: FontStyle.normal,
-                fontSize: 14,
-                color: Color(0xff000000),
-              ),
             ),
-            TextField(
+              const SizedBox(height: 10),
+
+              TextField(
               controller: _nameController,
               obscureText: false,
               maxLines: 1,
@@ -325,13 +328,15 @@ class _NewTaskState extends State<NewTask> {
                 isDense: false,
               ),
             ),
-            Padding(
-              padding: EdgeInsets.all(16.0),
-              child: Column(
+              const SizedBox(height: 16)
+              ]
+            ),
+
+             Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   // Task Type Dropdown
-                  Text("Task Type"),
+                  const Text("Task Type"),
                   DropdownButton<String>(
                     value: _selectedTaskType,
                     onChanged: (newValue) {
@@ -349,18 +354,20 @@ class _NewTaskState extends State<NewTask> {
                       return DropdownMenuItem(value: type, child: Text(type));
                     }).toList(),
                   ),
+                ],
+             ),
 
-                  SizedBox(height: 16),
+                  const SizedBox(height: 16),
 
                   // Show radio buttons if "One-Time" or "Repetitive" is selected
                   if (_selectedTaskType == "One-Time" ||
                       _selectedTaskType == "Repetitive") ...[
-                    Text("Notification Type"),
+                    const Text("Notification Type"),
                     //Notif type is duration type
                     Column(
                       children: [
                         RadioListTile<String>(
-                          title: Text("Notify after hours"),
+                          title: const Text("Notify after hours"),
                           value: "Hours",
                           groupValue: _selectedDurationType,
                           onChanged: (value) {
@@ -378,7 +385,7 @@ class _NewTaskState extends State<NewTask> {
                           ),
                         ],
                         RadioListTile<String>(
-                          title: Text("Notify after days"),
+                          title: const Text("Notify after days"),
                           value: "Days",
                           groupValue: _selectedDurationType,
                           onChanged: (value) {
@@ -398,7 +405,7 @@ class _NewTaskState extends State<NewTask> {
                         if (_selectedTaskType ==
                             "One-Time") // Only show this for One-Time tasks
                           RadioListTile<String>(
-                            title: Text("Set specific date/time"),
+                            title: const Text("Set specific date/time"),
                             value: "Specific",
                             groupValue: _selectedDurationType,
                             onChanged: (value) {
@@ -423,7 +430,7 @@ class _NewTaskState extends State<NewTask> {
                     ),
                   ],
 
-                  SizedBox(height: 16),
+                  const SizedBox(height: 16),
 
                   // Checkbox for "Provide more info?"
                   Row(
@@ -436,24 +443,26 @@ class _NewTaskState extends State<NewTask> {
                           });
                         },
                       ),
-                      Text("Provide more info?"),
+                      const Text("Provide more info?"),
                     ],
                   ),
+                  const SizedBox(height: 16),
 
                   // Show Details field when checkbox is checked
                   if (_showDetails) ...[
-                    Text("Details"),
+                    const Text("Details"),
                     TextField(controller: _detailsController),
                   ],
 
-                  SizedBox(height: 20),
+                  const SizedBox(height: 20),
 
                   MaterialButton(
                     onPressed: _saveTask,
-                    color: const Color(0xffe8d63a),
-                    elevation: 0,
-                    shape: const RoundedRectangleBorder(
-                      borderRadius: BorderRadius.zero,
+                    color: const Color(0xffe1a6b7),
+                    elevation: 2,
+                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
                       side: BorderSide(color: Color(0xff808080), width: 1),
                     ),
                     child: const Text('Save Task',
@@ -462,10 +471,18 @@ class _NewTaskState extends State<NewTask> {
                   ),
                 ],
               ),
-            ),
-          ]),
-        ),
-      ),
-    );
+      
+              ),
+            
+          
+        );
   }
 }
+//         );
+//       )
+//           );
+//     //     ),
+//     //   ),
+//     // );
+//   }
+// }

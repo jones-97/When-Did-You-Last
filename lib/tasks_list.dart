@@ -140,12 +140,10 @@ class _TasksListState extends State<TasksList> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: const Color(0xff947448),
+        automaticallyImplyLeading: false,
+        backgroundColor: const Color.fromARGB(255, 219, 177, 77),
         title: const Text("Tasks View",
-            style: TextStyle(
-                fontWeight: FontWeight.w400,
-                fontSize: 14,
-                color: Color(0xff000000))),
+            ),
         actions: [
           PopupMenuButton<String>(
             icon: const Icon(Icons.menu, color: Color(0xff212435), size: 24),
@@ -169,12 +167,12 @@ class _TasksListState extends State<TasksList> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-          _buildSectionTitle("📝 Tracker Tasks", color: Colors.teal),
+          _buildSectionTitle("📝 Tracker Tasks", color: Color.fromARGB(255, 39, 194, 170)),
           _buildTaskSection("Tracker Tasks", trackerTasks),
 
           const SizedBox(height: 30),
 
-          _buildSectionTitle("⏰ Reminder Tasks", color: Colors.deepOrange),
+          _buildSectionTitle("⏰ Reminder Tasks", color: Color.fromARGB(255, 189, 135, 125)),
           _buildTaskSection("Tasks Due Today", tasksDueToday),
           _buildTaskSection("Tasks Due In Two Days", tasksDueInTwoDays),
           const SizedBox(height: 20),
@@ -211,7 +209,7 @@ class _TasksListState extends State<TasksList> {
         ),
       ),
       floatingActionButton: FloatingActionButton(
-        backgroundColor: const Color(0xff3ae882),
+        backgroundColor: const Color.fromARGB(255, 83, 214, 184),
         onPressed: () {
           Navigator.push(
                   context, MaterialPageRoute(builder: (context) => NewTask()))

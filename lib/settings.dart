@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_system_ringtones/flutter_system_ringtones.dart';
 import 'package:android_intent_plus/android_intent.dart';
 import 'package:android_intent_plus/flag.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 
 import 'package:provider/provider.dart';
 import 'Util/theme_provider.dart';
@@ -30,9 +31,11 @@ class _SettingsState extends State<Settings> {
 
   @override
   void initState() {
-    super.initState();
+      super.initState();
+    if (!kIsWeb) {
     _loadSettings();
     _loadRingtones();
+    }
   }
 
   Future<void> _loadSettings() async {
@@ -184,7 +187,7 @@ void _openAndroidNotificationSettings() async {
         title: const Text("Settings"),
         titleTextStyle:
             const TextStyle(color: Colors.white, fontStyle: FontStyle.italic),
-        backgroundColor: Colors.purple,
+        backgroundColor: const Color(0xff534e81),
       ),
       body: ListView(
         children: [
@@ -225,19 +228,8 @@ void _openAndroidNotificationSettings() async {
               });
             },
           ),
-          /*
-          SwitchListTile(
-            title: const Text("Auto-Complete Tasks"),
-            subtitle: const Text("Mark task as done when due date passes"),
-            value: _autoCompleteTasks,
-            onChanged: (value) {
-              setState(() {
-                _autoCompleteTasks = value;
-                _saveSetting('autoCompleteTasks', value);
-              });
-            },
-          ),
-          */
+          
+          
           SwitchListTile(
             title: const Text("Dark Mode"),
             value: themeProvider.isDarkMode,

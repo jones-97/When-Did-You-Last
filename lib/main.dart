@@ -11,6 +11,8 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:android_intent_plus/android_intent.dart';
 import 'package:android_intent_plus/flag.dart';
+import 'package:when_did_you_last/Util/loading_screen.dart';
+import 'package:when_did_you_last/app_lifecycle_manager.dart';
 import 'package:when_did_you_last/intro_permissions.dart';
 import 'package:workmanager/workmanager.dart';
 // import 'dart:io';
@@ -19,7 +21,6 @@ import 'package:provider/provider.dart';
 import 'Models/task.dart';
 import 'Util/theme_provider.dart';
 import 'Util/database_helper.dart';
-import 'Util/notifications_helper_old.dart';
 import 'Util/notification_helper.dart';
 // import 'dart:io';
 import 'home_page.dart'; // Import the new home.dart file
@@ -42,6 +43,11 @@ final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
   }
 }
 */
+
+Future<bool> _loadEverything() async {
+    await _initializeAppServices();
+    return true;
+  }
 
 Future<void> _requestNotificationPermission() async {
   if (await Permission.notification.isDenied) {
@@ -76,58 +82,59 @@ Future<void> _requestNotificationPermission() async {
 
 void main() async {
   try {
+    WidgetsFlutterBinding.ensureInitialized(); 
+    // Ensures Flutter is fully initialized
+    
+    prefs = await SharedPreferences.getInstance();
+    final introShown = prefs.getBool('intro_shown') ?? false;
+
+    await _initializeAppServices();
+
+    runApp(ChangeNotifierProvider(
+        create: (context) => ThemeProvider(), child: MyApp(showIntro: !introShown))
+        );
+  
     //   if (Platform.isWindows || Platform.isLinux) {
     //   // Initialize FFI
     //   sqfliteFfiInit();
     // }
+  } catch (e) {
+    debugPrint("Problem initializing the whole app:  $e");
+  }
+}
 
-    WidgetsFlutterBinding.ensureInitialized(); 
-    // Ensures Flutter is fully initialized
-    // prefs = await SharedPreferences.getInstance();
-    //  bool isDarkMode = prefs.getBool('darkMode') ?? false;
-    prefs = await SharedPreferences.getInstance();
-    final introShown = prefs.getBool('intro_shown') ?? false;
-
+Future<void> _initializeAppServices() async {
+  try {
     if (!kIsWeb) {
-    
-
       tz.initializeTimeZones();
 
       await NotificationHelper.init();
-    
-
-
-      
 
       await Workmanager().initialize(callbackDispatcher, isInDebugMode: false);
 
-      //CHANGE THE 'true' IN THE ABOVE TO FALSE WHEN READY
+      //CHANGE THE 'true' IN THE ABOVE TO 'false' WHEN READY
 
       //Request PERMISSIONS:
+      //THESE THREE COMMENTED OUT BECAUSE MOVED TO PERMISSIONS SCREEN
 
-      await _requestNotificationPermission();
-      await _checkExactAlarmPermission();
-    //  await _requestExactAlarmPermission();
-      _requestBatteryOptimization();
+    //   await _requestNotificationPermission();
+    //   await _checkExactAlarmPermission();
+    // //  await _requestExactAlarmPermission();
+    //   _requestBatteryOptimization();
     }
 
     // Initialize the database before running the app
-    // final dbHelper = DatabaseHelper();
-    // await dbHelper.database;
-
+    // A default db already implemented for android; for web, below is applied:
     if (kIsWeb) {
       // running on the web!
       databaseFactory = databaseFactoryFfiWeb;
       //Ensures IndexedDB is properly used because of persistence issues (remembering data) on the web
     }
-
-//  await _testNotification();
-
-    runApp(ChangeNotifierProvider(
-        create: (context) => ThemeProvider(), child: MyApp(showIntro: !introShown)));
+    await Future.delayed(const Duration(seconds: 2));
   } catch (e) {
-    debugPrint("Problem initializing the whole app:  $e");
+    debugPrint("FAilure intiailizing app services, THE FAILURE: $e");
   }
+
 }
 
 Future<void> _requestBatteryOptimization() async {
@@ -245,15 +252,55 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Consumer<ThemeProvider>(builder: (context, themeProvider, child) {
-      return MaterialApp(
+      if (!kIsWeb) {
+      return AppLifecycleManager(
+        child: MaterialApp(
         navigatorKey: navigatorKey,
         debugShowCheckedModeBanner: false,
         title: 'When Did You Last?',
         theme: ThemeData.light(),
         darkTheme: ThemeData.dark(),
         themeMode: themeProvider.isDarkMode ? ThemeMode.dark : ThemeMode.light,
-        home: kIsWeb ? const MyHomePage() : showIntro ? const IntroPermissionsScreen() : const MyHomePage(), // Set HomeScreen as the main screen
+        home: FutureBuilder<bool>(
+        future: _loadEverything(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.done) {
+            return kIsWeb ? const MyHomePage() : showIntro ? const IntroPermissionsScreen() : const MyHomePage(); // Set HomeScreen as the main screen
+          } else {
+            return const LoadingScreen(); // Show spinner while waiting
+          }        
+      }
+        )
+      )
       );
-    });
+    }
+  
+  else {
+    return MaterialApp(navigatorKey: navigatorKey,
+        debugShowCheckedModeBanner: false,
+        title: 'When Did You Last?',
+        theme: ThemeData.light(),
+        darkTheme: ThemeData.dark(),
+        themeMode: themeProvider.isDarkMode ? ThemeMode.dark : ThemeMode.light,
+        home: FutureBuilder<bool>(
+        future: _loadEverything(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.done) {
+            return const MyHomePage();
+          } else {
+            return const LoadingScreen(); // Show spinner while waiting
+          }
+        }
+        )
+        
+        
+        
+        
+        
+       // const MyHomePage(), // Set HomeScreen as the main screen
+    );
   }
+  });
+  }
+  
 }

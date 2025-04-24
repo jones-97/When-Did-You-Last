@@ -3,6 +3,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:android_intent_plus/android_intent.dart';
 import 'dart:io' show Platform;
+import 'package:flutter/foundation.dart' show kIsWeb;
 
 import 'package:when_did_you_last/home_page.dart';
 import 'package:when_did_you_last/tutorial_screen.dart';
@@ -21,7 +22,10 @@ class _IntroPermissionsScreenState extends State<IntroPermissionsScreen> {
   @override
   void initState() {
     super.initState();
-    _checkPermissions();
+    if (!kIsWeb) {
+         _checkPermissions();
+    }
+   
   }
 
   Future<void> _checkPermissions() async {
@@ -84,13 +88,13 @@ class _IntroPermissionsScreenState extends State<IntroPermissionsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("Setup Permissions")),
+      appBar: AppBar(title: const Text("Setup Permissions", style: TextStyle(color: Colors.white),), backgroundColor: const Color(0xff939dab)),
       body: Padding(
         padding: const EdgeInsets.all(20),
         child: Column(
           children: [
             const Text("We need a few permissions to send reminders reliably:"),
-            const SizedBox(height: 16),
+            const SizedBox(height: 20),
             ListTile(
               leading: Icon(_notificationGranted ? Icons.check : Icons.notifications),
               title: const Text("Notification Permission"),
@@ -101,18 +105,39 @@ class _IntroPermissionsScreenState extends State<IntroPermissionsScreen> {
               title: const Text("Exact Alarm Permission"),
               subtitle: const Text("To schedule exact reminders (Android 12+)"),
             ),
+            const SizedBox(height: 20),
+            
             const Divider(),
-            ElevatedButton(
+            const SizedBox(height: 20),
+            MaterialButton(
+               elevation: 2, // Adds a subtle shadow
+  shape: RoundedRectangleBorder(
+    borderRadius: BorderRadius.circular(12), // Rounded corners
+  ),
+  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+              color: const Color(0xffefd0d7),
               onPressed: _requestPermissions,
               child: const Text("Request Permissions"),
             ),
             const SizedBox(height: 12),
-            ElevatedButton(
+            MaterialButton(
+               elevation: 2, // Adds a subtle shadow
+  shape: RoundedRectangleBorder(
+    borderRadius: BorderRadius.circular(12), // Rounded corners
+  ),
+  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+              color: const Color(0xffefd0d7),
               onPressed: _openBatteryOptimizationSettings,
               child: const Text("Disable Battery Optimization"),
             ),
             const Spacer(),
-            ElevatedButton(
+            MaterialButton(
+               elevation: 2, // Adds a subtle shadow
+  shape: RoundedRectangleBorder(
+    borderRadius: BorderRadius.circular(12), // Rounded corners
+  ),
+  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+              color: const Color(0xfffcaeae2),
               onPressed: _completeSetup,
               child: const Text("Continue to App"),
             )
