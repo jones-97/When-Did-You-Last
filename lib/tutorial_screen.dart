@@ -92,7 +92,7 @@ class TutorialScreen extends StatelessWidget {
   @override
 Widget build(BuildContext context) {
   return Scaffold(
-    appBar: AppBar(title: const Text("How to Use the App"), backgroundColor: const Color.fromARGB(255, 249, 232, 191),),
+    appBar: AppBar(title: const Text("How to Use the App"), backgroundColor: const Color.fromARGB(255, 245, 184, 43),),
     body: SingleChildScrollView(
       padding: const EdgeInsets.all(20),
       child: Column(

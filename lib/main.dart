@@ -166,12 +166,25 @@ void callbackDispatcher() {
       // Keep background service alive
       int? taskId = inputData?['taskId'];
 
+
       if (taskId != null) {
         final task = await DatabaseHelper().getTaskById(taskId);
-        if (task != null && task.autoRepeat && !task.notificationsPaused) {
-          await NotificationHelper.scheduleNotification(task);
+        if (task != null && task.notificationsEnabled && task.autoRepeat) {
+          // await NotificationHelper.scheduleNotification(task);
           debugPrint("📡 WorkMANAGER periodic task SET FROM MAIN with WorkManager for task ${task.id}");
+          
+          
+          //await NotificationHelper.createImmediateNotification(task);
+          // Only reschedule - don't show immediate notification
+          final nextTime = DateTime.now().add(
+            Duration(minutes: task.customInterval ?? 15)
+          );
+          await DatabaseHelper().updateTask(
+            task.copyWith(notificationTime: nextTime.millisecondsSinceEpoch)
+          );
+          await NotificationHelper.scheduleNotification(task);
 
+          
         }
       }
       return Future.value(true);

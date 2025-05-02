@@ -51,7 +51,7 @@ void notificationTapBackground(NotificationResponse response) async {
       case 'stop_action':
         debugPrint("⛔ Background: Stopping task $taskId");
 
-        await db.updateTask(task.copyWith(notificationsPaused: true));
+        await db.updateTask(task.copyWith(notificationsEnabled: false));
         await Workmanager().cancelByUniqueName("repeating_task_$taskId");
         break;
 
@@ -363,7 +363,7 @@ if (taskId == null) {
 //     await NotificationHelper.scheduleNotification(task);
 //   }
 // }
-        if (task.taskType == 'Repetitive' && !task.notificationsPaused) {
+        if (task.taskType == 'Repetitive' && task.notificationsEnabled) {
           if (!task.autoRepeat) {
             // Only reschedule if user confirms (autoRepeat is false)
             final nextTime = DateTime.now().add(Duration(
@@ -385,7 +385,7 @@ if (taskId == null) {
         // Cancel both notification and Workmanager
       await cancelNotification(taskId);
       await Workmanager().cancelByUniqueName("repeating_task_$taskId");
-      await db.updateTask(task.copyWith(notificationsPaused: true));
+      await db.updateTask(task.copyWith(notificationsEnabled: false));
       break;
 
       default:
@@ -443,7 +443,7 @@ if (taskId == null) {
       final dbHelper = DatabaseHelper();
       await dbHelper.updateTask(
         (await dbHelper.getTaskById(taskId))!.copyWith(
-          notificationsPaused: true,
+          notificationsEnabled: false,
         ),
       );
       // await Workmanager().cancelByUniqueName("repeating_task_$taskId");
@@ -513,7 +513,7 @@ if (taskId == null) {
     final dbHelper = DatabaseHelper();
     await dbHelper.updateTask(
       (await dbHelper.getTaskById(taskId))!.copyWith(
-        notificationsPaused: true, // Add this field to your Task model
+        notificationsEnabled: false, // Add this field to your Task model
       ),
     );
   }

@@ -1,14 +1,13 @@
-import 'dart:math';
+
 import 'dart:typed_data';
 
 import 'package:awesome_notifications/awesome_notifications.dart';
 import 'package:flutter/material.dart';
-import 'package:sqflite/sqflite.dart';
+
 import 'package:workmanager/workmanager.dart';
 import '../Models/task.dart';
 import '../Util/database_helper.dart';
-import 'package:timezone/data/latest.dart' as tz;
-import 'package:timezone/timezone.dart' as tz;
+
 
 class NotificationHelper {
 
@@ -90,7 +89,7 @@ class NotificationHelper {
     }
 
     debugPrint(
-        "🔍 Task loaded: $taskId, type=${task.taskType}, paused=${task.notificationsPaused}, autoRepeat=${task.autoRepeat}");
+        "🔍 Task loaded: $taskId, type=${task.taskType}, notifications status=${task.notificationsEnabled}, autoRepeat=${task.autoRepeat}");
     debugPrint(
         "🧪 durationType: ${task.durationType}, interval: ${task.customInterval}");
 
@@ -106,8 +105,8 @@ class NotificationHelper {
 
           if (task.taskType == 'Repetitive') {
             debugPrint("✅ Task is repetitive");
-            if (!task.notificationsPaused) {
-              debugPrint("🔓 Notifications are not paused");
+            if (task.notificationsEnabled) {
+              debugPrint("🔓 Notifications are enabled");
               if (!task.autoRepeat) {
                 debugPrint("🔁 Not auto-repeat mode, rescheduling...");
 
@@ -135,7 +134,7 @@ class NotificationHelper {
                 debugPrint("🚫 Skipping because task is autoRepeat");
               }
             } else {
-              debugPrint("🚫 Skipping because notificationsPaused is true");
+              debugPrint("🚫 Skipping because notifications enabled is false");
             }
           } else {
             debugPrint("🚫 Skipping because task is not Repetitive");
@@ -147,17 +146,19 @@ class NotificationHelper {
           debugPrint('Stop action for task $taskId');
 
           await DatabaseHelper()
-              .updateTask(task.copyWith(notificationsPaused: true));
+              .updateTask(task.copyWith(notificationsEnabled: false));
           await markTaskAsDone(taskId);
           await Workmanager().cancelByUniqueName("repeating_task_$taskId");
           debugPrint("YOU HAVE STOPPED THIS TASK! 🛑");
 
           // Optionally mark task as paused in database
-          // await DatabaseHelper().updateTask(task.copyWith(notificationsPaused: true));
+          // await DatabaseHelper().updateTask(task.copyWith(notificationsEnabled: false));
           break;
 
         case 'ok_action':
           debugPrint('OK action for task $taskId');
+          await DatabaseHelper()
+              .updateTask(task.copyWith(notificationsEnabled: false));
           await markTaskAsDone(taskId);
           debugPrint("YOU HAVE PRESSED okayyyy for THIS TASK! 📮");
           break;
@@ -286,7 +287,7 @@ class NotificationHelper {
 */
 
   static Future<void> scheduleNotification(Task task) async {
-  if (task.notificationTime == null) return;
+  if (task.notificationTime == null || !task.notificationsEnabled) return;
 
   final isRepetitive = task.taskType == "Repetitive";
   final scheduledTime = DateTime.fromMillisecondsSinceEpoch(task.notificationTime!);
@@ -296,8 +297,9 @@ class NotificationHelper {
   
   //await cancelNotification(createUniqueNotificationId(task.id!));
   await cancelNotification(task.id!);
+  await cancelWorkManagerTask(task.id!);
 
-  // For repetitive tasks with autoRepeat, ONLY use Workmanager
+  // For autorepeat tasks, use Workmanager + immediateNotif
   if (isRepetitive && task.autoRepeat) {
     Duration frequency;
     switch (task.durationType) {
@@ -316,15 +318,19 @@ class NotificationHelper {
 
     debugPrint("📡 Registering periodic task with WorkManager for task ${task.id}");
     
-    // Cancel any existing workmanager task first
-    await Workmanager().cancelByUniqueName("repeating_task_${task.id}");
-    
+    // OLD: Cancel any existing workmanager task first
+    //await Workmanager().cancelByUniqueName("repeating_task_${task.id}");
+       // 1. Create immediate notification first
+    await _createAutoRepeatNotification(task);
+
+    // 2. Register periodic task with initialDelay = 15 seconds (for testing)
     await Workmanager().registerPeriodicTask(
       "repeating_task_${task.id}",
       "repeatingTask",
       frequency: frequency,
+     // initialDelay: const Duration(seconds: 15), //REMOVE THIS AFTER TESTING!
       inputData: {'taskId': task.id},
-      constraints: Constraints(networkType: NetworkType.not_required),
+      constraints: Constraints(networkType: NetworkType.not_required, requiresBatteryNotLow: false),
     );
     
     // Don't create an AwesomeNotification for auto-repeat tasks
@@ -387,6 +393,41 @@ class NotificationHelper {
   }
 }
 
+  static Future<void> _createAutoRepeatNotification(Task task) async {
+      final payload = {
+    'taskId': task.id.toString(),
+    'taskType': task.taskType,
+    'durationType': task.durationType,
+    if (task.customInterval != null) 'customInterval': task.customInterval.toString(),
+  };
+
+  await AwesomeNotifications().createNotification(
+    content: NotificationContent(
+      id: task.id!,
+      channelKey: 'task_channel',
+      title: task.name,
+      body: task.details ?? 'Task reminder (Auto-Repeat)',
+      payload: payload,
+    ),
+    actionButtons: [
+      NotificationActionButton(
+        key: 'continue_action',
+        label: 'Continue',
+        actionType: ActionType.SilentAction,
+        //autoDismissible: true,
+      ),
+      NotificationActionButton(
+        key: 'stop_action',
+        label: 'Stop',
+        actionType: ActionType.SilentAction,
+        //autoDismissible: true,
+      ),
+    ],
+  );
+}
+
+
+  @deprecated
   static Future<void> createImmediateNotification(Task task) async {
     //DIFFERENT FROM scheduleNotif(). This one handles autorepeating continuing tasks
     //UPDATE: NOT NEEDED; BRINGS CONFUSION
@@ -425,7 +466,7 @@ class NotificationHelper {
 
   // 📍 A clean helper for enabling/disabling a task's notifications
 static Future<void> updateNotificationState(Task task) async {
-  if (task.notificationsPaused) {
+  if (!task.notificationsEnabled) {
     // 🚫 Notifications disabled
     await cancelNotification(task.id!);
 
@@ -465,6 +506,23 @@ static Future<void> updateNotificationState(Task task) async {
     final task = await dbHelper.getTaskById(taskId);
     if (task != null) {
       await dbHelper.markTaskDone(taskId, formattedDate);
+      debugPrint("Marking ${task.name} as DONE of TASK TYPE: ${task.taskType} on COMPLETED DATE $formattedDate");
+
+      if (task.taskType == "One-Time") {
+      //  await dbHelper.deleteTask(taskId);
+        await cancelNotification(taskId);
+      }
+    }
+  }
+
+  static Future<void> unmarkTaskAsDone(int taskId) async {
+    final dbHelper = DatabaseHelper();
+    final today = DateTime.now();
+    final formattedDate = today.toIso8601String();
+
+    final task = await dbHelper.getTaskById(taskId);
+    if (task != null) {
+      await dbHelper.unmarkTaskDone(taskId, formattedDate);
       debugPrint("Marking ${task.name} as DONE of TASK TYPE: ${task.taskType} on COMPLETED DATE $formattedDate");
 
       if (task.taskType == "One-Time") {

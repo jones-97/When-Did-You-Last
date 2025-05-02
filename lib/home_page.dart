@@ -57,10 +57,12 @@ class _MyHomePageState extends State<MyHomePage> {
             icon: const Icon(Icons.menu, color: Color(0xff212435), size: 24),
             onSelected: (value) {
               if (value == 'Task View') {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => TasksList()),
-                );
+                Navigator.pushReplacement(
+  context,
+  MaterialPageRoute(builder: (context) => TasksList()),
+);
+
+                
               }
               else if (value == 'Settings') {
                 

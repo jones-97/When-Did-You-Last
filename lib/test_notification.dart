@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:when_did_you_last/Util/database_helper.dart';
-import 'Util/notifications_helper_old.dart';
 import 'Util/notification_helper.dart';
 // import 'package:flutter/foundation.dart' show kIsWeb;
 import 'Models/task.dart';
@@ -14,7 +13,7 @@ class _TestNotificationScreenState extends State<TestNotificationScreen> {
   // Create test tasks with proper IDs (use negative numbers for test IDs)
   final onceTask = Task(
     id: 102, // Temporary test ID
-    name: "Test One-Time",
+    name: "One-Time Test Notification",
     taskType: "One-Time",
     durationType: "Minutes",
     notificationTime:
@@ -24,11 +23,11 @@ class _TestNotificationScreenState extends State<TestNotificationScreen> {
 
   final repeatTask = Task(
     id: 202, // Temporary test ID
-    name: "Test Repetitive",
+    name: "Repetitive Test Notification INPUT",
     taskType: "Repetitive",
     durationType: "Minutes",
     autoRepeat: false,
-    notificationsPaused: false,
+    notificationsEnabled: true,
     notificationTime:
         DateTime.now().add(const Duration(minutes: 1)).millisecondsSinceEpoch,
     customInterval: 1,
@@ -37,10 +36,10 @@ class _TestNotificationScreenState extends State<TestNotificationScreen> {
   final ptTask = Task(
     //THIS IS THE REAL 15-MIN ONE
     id: 312,
-    name: "Test Notification",
+    name: "Real Payload Test Notification",
     taskType: "Repetitive",
     durationType: "Minutes",
-    notificationsPaused: false,
+    notificationsEnabled: true,
     autoRepeat: true,
     notificationTime:
         DateTime.now().add(const Duration(minutes: 16)).millisecondsSinceEpoch,
@@ -53,7 +52,7 @@ class _TestNotificationScreenState extends State<TestNotificationScreen> {
   taskType: "Repetitive",
   durationType: "Minutes",
   autoRepeat: true, // keep this true to mimic a real scenario
-  notificationsPaused: false,
+  notificationsEnabled: true,
   notificationTime:
       DateTime.now().add(const Duration(seconds: 10)).millisecondsSinceEpoch,
   customInterval: 1,
@@ -63,7 +62,11 @@ class _TestNotificationScreenState extends State<TestNotificationScreen> {
 
   Future<void> _sendOneTimeNotification() async {
     try {
+
+          // Delete if already exists
+    await DatabaseHelper().deleteTask(onceTask.id!);
   
+  //Now insert fresh
       await DatabaseHelper().insertTask(onceTask);
       await NotificationHelper.scheduleNotification(onceTask);
       ScaffoldMessenger.of(context).showSnackBar(
@@ -76,6 +79,10 @@ class _TestNotificationScreenState extends State<TestNotificationScreen> {
 
   Future<void> _sendRepetitiveNotification() async {
     try {
+          // Delete if already exists
+    await DatabaseHelper().deleteTask(repeatTask.id!);
+
+    //now insert fresh
       await DatabaseHelper().insertTask(repeatTask);
       await NotificationHelper.scheduleNotification(repeatTask);
       ScaffoldMessenger.of(context).showSnackBar(
@@ -91,6 +98,10 @@ class _TestNotificationScreenState extends State<TestNotificationScreen> {
     //THIS IS FOR THE REAL PAYLOAD NOTIFICATION OF 15-MIN
 
     try {
+          // Delete if already exists
+    await DatabaseHelper().deleteTask(ptTask.id!);
+
+    //insert fresh
       await DatabaseHelper().insertTask(ptTask);
       await NotificationHelper.scheduleNotification(ptTask);
       ScaffoldMessenger.of(context).showSnackBar(
@@ -106,6 +117,9 @@ class _TestNotificationScreenState extends State<TestNotificationScreen> {
 
     Future<void> _sendPayloadNotification() async {
   try {
+        // Delete if already exists
+    await DatabaseHelper().deleteTask(payloadTask.id!);
+    //insert fresh
     await DatabaseHelper().insertTask(payloadTask);
     await NotificationHelper.scheduleNotification(payloadTask);
 
@@ -114,7 +128,7 @@ class _TestNotificationScreenState extends State<TestNotificationScreen> {
       await Future.delayed(const Duration(seconds: 30));
 
       final task = await DatabaseHelper().getTaskById(payloadTask.id!);
-      if (task == null || task.notificationsPaused || !task.autoRepeat) {
+      if (task == null || !task.notificationsEnabled || !task.autoRepeat) {
         debugPrint("🛑 Auto-repeat simulation stopped.");
         return false; // stop repeating
       }

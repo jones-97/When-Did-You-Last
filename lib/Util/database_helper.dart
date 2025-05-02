@@ -49,7 +49,7 @@ class DatabaseHelper {
     auto_repeat INTEGER DEFAULT 0,
     custom_interval INTEGER DEFAULT NULL, 
     notification_time INTEGER DEFAULT 0,
-    notifications_paused INTEGER DEFAULT 0
+    notifications_enabled INTEGER DEFAULT 1
   )
 ''');
 
@@ -139,7 +139,7 @@ class DatabaseHelper {
 // HANDLING TASK COMPLETION DATES
 
 //pause a task NOTIFICATIONS
-Future<void> pauseTask(int taskID) async {
+Future<void> pauseTask(int taskId) async {
   try {
       final db = await database;
 
@@ -148,7 +148,7 @@ Future<void> pauseTask(int taskID) async {
     SET notification_paused = 1,
     WHERE _id = ?}
     ''',
-    [taskID]);
+    [taskId]);
     } catch (e) {
       debugPrint("Error pausing task: $e");
       rethrow;
@@ -156,7 +156,7 @@ Future<void> pauseTask(int taskID) async {
 }
 
 //restart a task
-Future<void> resumeTask (int taskID) async {
+Future<void> resumeTask (int taskId) async {
 
   try {
       final db = await database;
@@ -166,7 +166,7 @@ Future<void> resumeTask (int taskID) async {
     SET notification_paused = 0,
     WHERE _id = ?}
     ''',
-    [taskID]);
+    [taskId]);
     } catch (e) {
       debugPrint("Error resuming task: $e");
       rethrow;
@@ -198,6 +198,18 @@ Future<void> unmarkTaskDone(int taskId, String date) async {
   );
   } catch (e) {
     debugPrint("Error unmarking or making a task NOT DONE: $e");
+  }
+}
+
+Future<void> removeFromCompletionDates(int taskId) async {
+  try {
+    final db = await database;
+    await db.delete('completed_tasks',
+    where: 'task_id = ?',
+    whereArgs: [taskId]);
+    debugPrint("Successfully removed task from the completion table.");
+  } catch (e) {
+    debugPrint("Error removing task from the completed tasks table: $e");
   }
 }
 

@@ -225,36 +225,70 @@ class _NewTaskState extends State<NewTask> {
       autoRepeat: _autoRepeat,
       customInterval: custom_interval ?? 0,
       notificationTime: notificationTime,
-      notificationsPaused: false,
+      notificationsEnabled: true,
     );
 
     final id = await DatabaseHelper().insertTask(task);
+
     debugPrint("New task's id is $id");
 
     // First insert the task to get the auto-generated ID
 
     // Now update the task with the generated ID
     final taskWithId = task.copyWith(id: id);
-
+    
     // Schedule notification with the actual ID
     // if (taskWithId.notificationTime != null) {
     //   await NotificationHelper.scheduleTaskNotification(taskWithId);
     // }
+     if (taskWithId.taskType == "No Alert/Tracker") {
+      ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(elevation: 6,
+            content: const Text("Tracker Task successfully created!"),
+            behavior: SnackBarBehavior.floating,
+    margin: const EdgeInsets.fromLTRB(16, 0, 16, 15), // adds space from bottom
+    shape: RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(30), // pill shape
+    ),
+     // optional: make it pop
+    
+    duration: const Duration(seconds: 3),
+            
+            
+            ));
 
+    }
     // Schedule notification
     if (!kIsWeb && taskWithId.notificationTime != null) {
+
       try {
         // 1. First ensure notifications are initialized
 
         await NotificationHelper.scheduleNotification(taskWithId);
+        ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(elevation: 6,
+            content: const Text("Task successfully created and scheduled!"),
+            behavior: SnackBarBehavior.floating,
+    margin: const EdgeInsets.fromLTRB(16, 0, 16, 15), // adds space from bottom
+    shape: RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(30), // pill shape
+    ),
+     // optional: make it pop
+    
+    duration: const Duration(seconds: 3),
+            
+            
+            ));
+        
+        
       } catch (e) {
         debugPrint("Error scheduling notification: $e");
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
             content:
                 Text("Task saved but notification failed: ${e.toString()}")));
       }
-    }
-
+    } 
+    
     Navigator.pop(context, true);
   }
 
