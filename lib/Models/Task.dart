@@ -6,7 +6,8 @@ class Task {
   String durationType; //None, Minutes, Hours, Days, Specific
   bool autoRepeat; //0 or 1, false or true (Respectively)
   int? customInterval; // Nullable, for specifically-time reminders; future possible implementation
-  int? notificationTime; //to store EXACT values tasks due dates and times; a store for specific task types
+  int? notificationTime;
+  bool isActive; //to store EXACT values tasks due dates and times; a store for specific task types
   bool notificationsEnabled;
   //   List<String> completedDates = []; // Store multiple completion dates
 
@@ -19,6 +20,7 @@ class Task {
     this.autoRepeat = false,
     this.customInterval,
     this.notificationTime,
+    this.isActive = true,
     this.notificationsEnabled = true,
   });
 
@@ -33,6 +35,7 @@ class Task {
       'auto_repeat' : autoRepeat ? 1 : 0,
       'custom_interval': customInterval,
       'notification_time': notificationTime,
+      'is_active': isActive,
       'notifications_enabled': notificationsEnabled ? 1 : 0,
     };
   }
@@ -48,6 +51,7 @@ class Task {
       autoRepeat: map['auto_repeat'] == 1,
       customInterval: map['custom_interval'],
       notificationTime: map['notification_time'],
+      isActive: map['is_active'] == 1,
       notificationsEnabled: map['notifications_enabled'] == 1,
     );
   }
@@ -60,6 +64,7 @@ class Task {
     String? durationType,
     bool? autoRepeat,
     int? notificationTime,
+    bool? isActive,
     bool? notificationsEnabled,
     int? customInterval,
   }) {
@@ -71,6 +76,7 @@ class Task {
       durationType: durationType ?? this.durationType,
       autoRepeat: autoRepeat ?? this.autoRepeat,
       notificationTime: notificationTime ?? this.notificationTime,
+      isActive: isActive ?? this.isActive,
       notificationsEnabled: notificationsEnabled ?? this.notificationsEnabled,
       customInterval: customInterval ?? this.customInterval,
     );

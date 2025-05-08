@@ -225,6 +225,7 @@ class _NewTaskState extends State<NewTask> {
       autoRepeat: _autoRepeat,
       customInterval: custom_interval ?? 0,
       notificationTime: notificationTime,
+      isActive: true,
       notificationsEnabled: true,
     );
 

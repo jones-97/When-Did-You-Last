@@ -44,11 +44,13 @@ class DatabaseHelper {
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL,
     details TEXT,
+  
     task_type TEXT NOT NULL,
     duration_type TEXT,
     auto_repeat INTEGER DEFAULT 0,
     custom_interval INTEGER DEFAULT NULL, 
     notification_time INTEGER DEFAULT 0,
+    is_active INTEGER DEFAULT 1,
     notifications_enabled INTEGER DEFAULT 1
   )
 ''');
