@@ -3,6 +3,7 @@ import 'dart:typed_data';
 
 import 'package:awesome_notifications/awesome_notifications.dart';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:workmanager/workmanager.dart';
 import '../Models/task.dart';
@@ -299,6 +300,8 @@ class NotificationHelper {
   await cancelNotification(task.id!);
   await cancelWorkManagerTask(task.id!);
 
+  debugPrint("Received task details. Name: ${task.name}");
+
   // For autorepeat tasks, use Workmanager + immediateNotif
   if (isRepetitive && task.autoRepeat) {
     Duration frequency;
@@ -321,10 +324,12 @@ class NotificationHelper {
     // OLD: Cancel any existing workmanager task first
     //await Workmanager().cancelByUniqueName("repeating_task_${task.id}");
        // 1. Create immediate notification first
-    await _createAutoRepeatNotification(task);
+  //  await _createAutoRepeatNotification(task);
 
     // 2. Register periodic task with initialDelay = 15 seconds (for testing)
-    await Workmanager().registerPeriodicTask(
+
+    
+      await Workmanager().registerPeriodicTask(
       "repeating_task_${task.id}",
       "repeatingTask",
       frequency: frequency,
@@ -332,6 +337,10 @@ class NotificationHelper {
       inputData: {'taskId': task.id},
       constraints: Constraints(networkType: NetworkType.not_required, requiresBatteryNotLow: false),
     );
+
+  
+    
+    
     
     // Don't create an AwesomeNotification for auto-repeat tasks
     // Workmanager will handle the scheduling
@@ -347,8 +356,10 @@ class NotificationHelper {
   };
 
   try {
-    final newTaskId = createUniqueNotificationId(task.id!);
-    debugPrint("Creating a notification with new Id: $newTaskId");
+   // final newTaskId = createUniqueNotificationId(task.id!); //NOT USED
+
+   // debugPrint("Creating a notification with new Id: $newTaskId");
+   debugPrint("ScheduleNotification method. Creating a notification with id: ${task.id}");
 
     await AwesomeNotifications().createNotification(
       content: NotificationContent(
@@ -393,7 +404,37 @@ class NotificationHelper {
   }
 }
 
+  Future<void> showAutoRepeatNotification(Task task) async {
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+  String firstRunKey = 'task_${task.id}_hasRun';
+  
+  bool hasRunBefore = prefs.getBool(firstRunKey) ?? false;
+
+  String bodyMessage = hasRunBefore
+      ? "⏰ Time to do your task again!"
+      : "🔔 Task started! This is the first notification to confirm it’s running.";
+    
+  AwesomeNotifications().createNotification(
+    content: NotificationContent(
+      id: task.id!,  // Make sure this is unique per task
+      channelKey: 'task_channel',
+      title: task.name,
+      body: bodyMessage,
+      notificationLayout: NotificationLayout.Default,
+    ),
+    actionButtons: [NotificationActionButton(
+                key: 'stop_action',
+                label: 'Stop',
+                actionType: ActionType.SilentAction,
+                autoDismissible: true,
+              ),]
+  );
+}
+
+  @deprecated
   static Future<void> _createAutoRepeatNotification(Task task) async {
+
+
       final payload = {
     'taskId': task.id.toString(),
     'taskType': task.taskType,
@@ -409,6 +450,7 @@ class NotificationHelper {
       body: task.details ?? 'Task reminder (Auto-Repeat)',
       payload: payload,
     ),
+    
     actionButtons: [
       NotificationActionButton(
         key: 'continue_action',

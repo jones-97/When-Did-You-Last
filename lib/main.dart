@@ -166,9 +166,20 @@ void callbackDispatcher() {
       // Keep background service alive
       int? taskId = inputData?['taskId'];
 
+       final prefs = await SharedPreferences.getInstance();
+    final hasRunBefore = prefs.getBool('task_${taskId}_hasRun') ?? false;
+
+    if (!hasRunBefore) {
+      await prefs.setBool('task_${taskId}_hasRun', true);
+      // Skip first run
+      return Future.value(true);
+    }
+
+
 
       if (taskId != null) {
         final task = await DatabaseHelper().getTaskById(taskId);
+        final DateTime nextTime;
         if (task != null && task.notificationsEnabled && task.autoRepeat) {
           // await NotificationHelper.scheduleNotification(task);
           debugPrint("📡 WorkMANAGER periodic task SET FROM MAIN with WorkManager for task ${task.id}");
@@ -176,13 +187,26 @@ void callbackDispatcher() {
           
           //await NotificationHelper.createImmediateNotification(task);
           // Only reschedule - don't show immediate notification
-          final nextTime = DateTime.now().add(
-            Duration(minutes: task.customInterval ?? 15)
-          );
+          if (task.durationType == "Hours") {
+            nextTime = DateTime.now().add(
+              Duration(hours: task.customInterval ?? 1)
+               );
+          } else if (task.durationType == "Days") {
+            nextTime = DateTime.now().add(
+              Duration(days: task.customInterval ?? 1)
+               );
+          } else {
+            nextTime = DateTime.now().add(
+              Duration(minutes: task.customInterval ?? 15)
+               );
+          }
+           
           await DatabaseHelper().updateTask(
             task.copyWith(notificationTime: nextTime.millisecondsSinceEpoch)
           );
-          await NotificationHelper.scheduleNotification(task);
+          debugPrint("🔔 About to show notification for task ${taskId}");
+
+          await NotificationHelper().showAutoRepeatNotification(task);
 
           
         }

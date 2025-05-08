@@ -249,7 +249,7 @@ class _TasksListState extends State<TasksList> {
     return Scaffold(
       appBar: AppBar(
         automaticallyImplyLeading: false,
-        backgroundColor: const Color.fromARGB(255, 219, 177, 77),
+        backgroundColor: const Color.fromARGB(255, 83, 214, 184), //const Color.fromARGB(255, 219, 177, 77),
         title: const Text(
           "Tasks View",
         ),
