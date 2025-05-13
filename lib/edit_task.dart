@@ -27,7 +27,7 @@ class _EditTaskState extends State<EditTask> {
   bool _showDetails = false;
   bool _autoRepeat = false;
   DateTime? _selectedDate;
-  String? selectedDateString;
+  String selectedDateString = "";
   int? _notificationTime;
   bool _notificationsEnabled = false;
   // Duration? _timeOffset;
@@ -40,8 +40,10 @@ class _EditTaskState extends State<EditTask> {
     _hoursController = TextEditingController();
     _daysController = TextEditingController();
 
+
     _nameController.text = widget.task.name;
     _selectedTaskType = widget.task.taskType;
+    
 
     //BELOW LINE IS CONFUSING. WE ARE USING "Notifications Enabled".
     //Notificationspaused is false when a task is running. So we have to negate it to "TRUE"
@@ -50,6 +52,8 @@ class _EditTaskState extends State<EditTask> {
     _notificationsEnabled = widget.task.notificationsEnabled;
     _detailsController.text = widget.task.details ?? '';
     _autoRepeat = widget.task.autoRepeat;
+    selectedDateString = DateFormat('MMM dd, yyyy - hh:mm a').format(DateTime.fromMillisecondsSinceEpoch(widget.task.notificationTime!));
+
 
     _initializeNotificationSettings();
   }
@@ -96,6 +100,7 @@ class _EditTaskState extends State<EditTask> {
         _selectedDate = taskTime;
         selectedDateString =
             DateFormat('MMM dd, yyyy - hh:mm a').format(taskTime);
+            debugPrint('📅 Loaded existing selected date: $selectedDateString');
       }
     }
   }
@@ -198,6 +203,12 @@ class _EditTaskState extends State<EditTask> {
     }
   }
 
+   String _formatDateTime(int timestamp) {
+    final date = DateTime.fromMillisecondsSinceEpoch(timestamp);
+    return DateFormat('MMM dd, yyyy - hh:mm a').format(date);
+  }
+
+
   void calculateDateTime() {
     if (_selectedDate != null) {
       _notificationTime = _selectedDate!.millisecondsSinceEpoch;
@@ -220,112 +231,131 @@ class _EditTaskState extends State<EditTask> {
     }
   }
 
-  Future<void> _updateTask() async {
+Future<void> _updateTask() async {
+  // if (_selectedTaskType != "No Alert/Tracker") {
+  //   bool hasNoDays = _daysController.text.trim().isEmpty;
+  //   bool hasNoHours = _hoursController.text.trim().isEmpty;
+  //   bool hasNoDate = _selectedDate == null;
 
-    
-    if (_selectedTaskType != "No Alert/Tracker") {
-      
-      bool hasNoDays = _daysController.text.trim().isEmpty;
-      bool hasNoHours = _hoursController.text.trim().isEmpty;
-      bool hasNoDate = _selectedDate == null;
+  //   if (hasNoDays && hasNoHours && hasNoDate) {
+  //     ScaffoldMessenger.of(context).showSnackBar(
+  //       const SnackBar(
+  //           content: Text(
+  //               "Please provide a reminder value (hours, days, or date/time).")),
+  //     );
+  //     return;
+  //   }
+  // }
 
-      if (hasNoDays && hasNoHours && hasNoDate) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-              content: Text(
-                  "Please provide a reminder value (hours, days, or date/time).")),
-        );
-        return; // Prevent saving
-      }
-    }
+  try {
+    // Only recalculate notification time if duration settings changed
+    bool durationSettingsChanged =
+        widget.task.durationType != _selectedDurationType ||
+            (_selectedDurationType == 'Hours' &&
+                widget.task.customInterval != int.tryParse(_hoursController.text)) ||
+            (_selectedDurationType == 'Days' &&
+                widget.task.customInterval != int.tryParse(_daysController.text)) ||
+            (_selectedDurationType == 'Specific' &&
+                widget.task.notificationTime != _selectedDate?.millisecondsSinceEpoch);
 
-    try {
+    // Calculate new notification time only if duration settings changed
+    if (durationSettingsChanged) {
       calculateDateTime();
+    } else {
+      // Keep the original notification time if duration settings didn't change
+      _notificationTime = widget.task.notificationTime;
+    }
 
-      // Determine custom_interval value
-      int? customInterval;
-      if (_selectedDurationType == 'Hours' &&
-          _hoursController.text.isNotEmpty) {
-        customInterval = int.tryParse(_hoursController.text);
-      } else if (_selectedDurationType == 'Days' &&
-          _daysController.text.isNotEmpty) {
-        customInterval = int.tryParse(_daysController.text);
-      }
+    // Determine custom_interval value
+    int? customInterval;
+    if (_selectedDurationType == 'Hours' && _hoursController.text.isNotEmpty) {
+      customInterval = int.tryParse(_hoursController.text);
+    } else if (_selectedDurationType == 'Days' && _daysController.text.isNotEmpty) {
+      customInterval = int.tryParse(_daysController.text);
+    } else if (_selectedDurationType == 'Specific') {
+      // For specific date/time, we don't need a customInterval
+      customInterval = widget.task.customInterval;
+    }
 
-      final updatedTask = Task(
-        id: widget.task.id,
-        name: _nameController.text,
-        details: _showDetails ? _detailsController.text : null,
-        taskType: _selectedTaskType!,
-        durationType: _selectedDurationType ?? "None",
-        autoRepeat: _autoRepeat,
-        notificationTime: _notificationTime,
-        notificationsEnabled: _notificationsEnabled,
-        customInterval: customInterval ??
-            0, //stores original interval value eg 1 hour, 2 days
-      );
-      if (updatedTask.taskType != "No Alert/Tracker") {
-        debugPrint("Updating task in completion_table. Check message below...");
+    final updatedTask = Task(
+      id: widget.task.id,
+      name: _nameController.text,
+      details: _showDetails ? _detailsController.text : null,
+      taskType: _selectedTaskType!,
+      durationType: _selectedDurationType ?? "None",
+      autoRepeat: _autoRepeat,
+      notificationTime: _notificationTime,
+      notificationsEnabled: _notificationsEnabled,
+      customInterval: customInterval ?? widget.task.customInterval,
+    );
 
-        await DatabaseHelper().removeFromCompletionDates(updatedTask.id!);
-      }
-      final result = await DatabaseHelper().updateTask(updatedTask);
+    // Only update completion dates if task type changed
+    if (updatedTask.taskType != widget.task.taskType && 
+        updatedTask.taskType != "No Alert/Tracker") {
+      debugPrint("Task type changed, updating completion table...");
+      await DatabaseHelper().removeFromCompletionDates(updatedTask.id!);
+    }
 
-      //SCHEDULE NOTIFICATION
-      if (!kIsWeb) {
-        if (updatedTask.taskType == "No Alert/Tracker") {
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            elevation: 6,
-            content: const Text("Task Updated Successfully!"),
-            behavior: SnackBarBehavior.floating,
-            margin: const EdgeInsets.fromLTRB(
-                16, 0, 16, 15), // adds space from bottom
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(30), // pill shape
-            ),
-            // optional: make it pop
+    final result = await DatabaseHelper().updateTask(updatedTask);
 
-            duration: const Duration(seconds: 3),
-          ));
-        }
-        if (updatedTask.notificationTime != null) {
+    // Handle notifications
+    if (!kIsWeb) {
+      if (updatedTask.taskType == "No Alert/Tracker") {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          elevation: 6,
+          content: const Text("Task Updated Successfully!"),
+          behavior: SnackBarBehavior.floating,
+          margin: const EdgeInsets.fromLTRB(16, 0, 16, 15),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(30),
+          ),
+          duration: const Duration(seconds: 3),
+        ));
+      } else if (updatedTask.notificationTime != null) {
+        // Only update notification if relevant settings changed
+        bool notificationNeedsUpdate = durationSettingsChanged ||
+            widget.task.notificationsEnabled != _notificationsEnabled ||
+            widget.task.autoRepeat != _autoRepeat;
+
+        if (notificationNeedsUpdate) {
           await NotificationHelper.updateNotificationState(updatedTask);
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            elevation: 6,
-            content: const Text("Task Updated and Scheduled Successfully!"),
-            behavior: SnackBarBehavior.floating,
-            margin: const EdgeInsets.fromLTRB(
-                16, 0, 16, 15), // adds space from bottom
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(30), // pill shape
-            ),
-            // optional: make it pop
-
-            duration: const Duration(seconds: 3),
-          ));
         }
-      }
 
-      if (result > 0) {
-        Navigator.pop(context, true);
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Failed to update task")),
-        );
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          elevation: 6,
+          content: const Text("Task Updated and Scheduled Successfully!"),
+          behavior: SnackBarBehavior.floating,
+          margin: const EdgeInsets.fromLTRB(16, 0, 16, 15),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(30),
+          ),
+          duration: const Duration(seconds: 3),
+        ));
       }
-    } catch (e) {
-      debugPrint("Error updating task: $e");
+    }
+
+    if (result > 0) {
+      Navigator.pop(context, true);
+    } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("An error occurred while updating")),
+        const SnackBar(content: Text("Failed to update task")),
       );
     }
+  } catch (e) {
+    debugPrint("Error updating task: $e");
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text("An error occurred while updating")),
+    );
   }
+}
+
 
   void _showConfirmDialog() {
     showDialog(context: context, builder: (BuildContext context) {
       return AlertDialog(title: const Text("Delete Task?"),
       content: const Text("You are about to delete a task. \n"
-      "This will also clear it from completion tables. \n"
+      "This will also clear it from completion tables \n"
+      "and clear all linked notifications. \n"
       "Continue?"),
       actions: <Widget>[
         MaterialButton(
@@ -350,6 +380,8 @@ class _EditTaskState extends State<EditTask> {
     try {
       await dbHelper
           .deleteTask(widget.task.id!); // Delete the task from the database
+          await NotificationHelper.cancelNotification(widget.task.id!);
+           
       Navigator.pop(context,
           true); // Go back to the previous screen with a refresh signal
     } catch (e) {
@@ -480,7 +512,9 @@ class _EditTaskState extends State<EditTask> {
                     ),
                   if (_selectedDurationType == "Specific") ...[
                     Text(
-                        "Selected Date: ${selectedDateString ?? 'Not selected'}")
+                        selectedDateString!= null
+      ? "Selected Date: $selectedDateString"
+      : "Selected Date: Not Selected",)
                   ],
                 ],
               ),
@@ -566,7 +600,35 @@ class _EditTaskState extends State<EditTask> {
             const SizedBox(height: 20),
 
             MaterialButton(
-              onPressed: _updateTask,
+              onPressed: () {
+
+                showDialog(
+    context: context,
+    builder: (BuildContext context) {
+      return AlertDialog(
+        title: Text("Confirm Changes"),
+        content: Text(
+          "You are about to update this task. \n"
+          "If you changed its reminder time, \n the existing notification will be updated. "
+          "\n Otherwise, only the task's details will change."
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.of(context).pop(); // Dismiss dialog
+              _updateTask(); // Proceed to update
+            },
+            child: Text("Continue"),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: Text("Cancel"),
+          ),
+        ],
+      );
+    },
+  );
+                 },
               color: const Color(0xff8797b4),
               elevation: 2,
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),

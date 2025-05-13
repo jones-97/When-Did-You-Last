@@ -163,7 +163,7 @@ class _TasksListState extends State<TasksList> {
 
       // Active tasks (including auto-repeat)
       tasksDueToday = _tasks.where((task) {
-        if (task.notificationTime == null || !task.notificationsEnabled)
+        if (task.notificationTime == null || !task.isActive || !task.notificationsEnabled)
           return false;
         final taskDate =
             DateTime.fromMillisecondsSinceEpoch(task.notificationTime!);
@@ -171,7 +171,7 @@ class _TasksListState extends State<TasksList> {
       }).toList();
 
       tasksDueInTwoDays = _tasks.where((task) {
-        if (task.notificationTime == null || !task.notificationsEnabled)
+        if (task.notificationTime == null || !task.isActive || !task.notificationsEnabled)
           return false;
         final taskDate =
             DateTime.fromMillisecondsSinceEpoch(task.notificationTime!);
@@ -179,7 +179,7 @@ class _TasksListState extends State<TasksList> {
       }).toList();
 
       futureTasks = _tasks.where((task) {
-        if (task.notificationTime == null || !task.notificationsEnabled)
+        if (task.notificationTime == null || !task.isActive || !task.notificationsEnabled)
           return false;
         final taskDate =
             DateTime.fromMillisecondsSinceEpoch(task.notificationTime!);
@@ -189,15 +189,37 @@ class _TasksListState extends State<TasksList> {
       // Paused tasks - notifications manually disabled but not completed
       pausedTasks = _tasks.where((task) {
         return task.taskType != "No Alert/Tracker" &&
-            !task.notificationsEnabled &&
+            !task.notificationsEnabled && 
             (_taskCompletionDates[task.id!]?.isEmpty ?? true); // No completions
       }).toList();
 
 // Past tasks - completed at least once (regardless of notification status)
       pastTasks = _tasks.where((task) {
-        final completions = _taskCompletionDates[task.id!] ?? [];
-        return completions.isNotEmpty; // Only completion dates matter
-      }).toList();
+  if (task.taskType == "No Alert/Tracker") return false;
+
+  final completions = _taskCompletionDates[task.id!] ?? [];
+  final todayStr = now.toIso8601String().substring(0, 10);
+  final wasCompleted = completions.any((date) => date.compareTo(todayStr) <= 0);
+
+  final hasPastNotificationTime = task.notificationTime != null &&
+      DateTime.fromMillisecondsSinceEpoch(task.notificationTime!).isBefore(now);
+
+  return wasCompleted || hasPastNotificationTime;
+}).toList();
+
+  // pastTasks = _tasks.where((task) {
+  //      if (task.taskType == "No Alert/Tracker")
+  //      {   return false; }
+  //       final completions = _taskCompletionDates[task.id!] ?? [];
+  //       final todayStr = now.toIso8601String().substring(0, 10);
+  //       return completions.any((date) => date.compareTo(todayStr) <= 0);
+  //     }).toList();
+      // pastTasks = _tasks.where((task) {
+      //   if (task.taskType == "No Alert/Tracker")
+      //  {   return false; }
+      //   final completions = _taskCompletionDates[task.id!] ?? [];
+      //   return completions.isNotEmpty; // Only completion dates matter
+      // }).toList();
 
       // Paused tasks (notificationsEnabled = false)
       //   pausedTasks = _tasks.where((task) {

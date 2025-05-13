@@ -54,42 +54,53 @@ class _IntroPermissionsScreenState extends State<IntroPermissionsScreen> {
     }
   }
 
-  Future<void> _requestPermissions() async {
-    await _requestNotificationPermission();
-    await _checkExactAlarmPermission();
+Future<void> _requestPermissions() async {
+  // 🔔 Step 1: Ask system for notification permission (only happens on Android 13+)
+  final notifStatus = await Permission.notification.request();
 
-    final androidPlugin = FlutterLocalNotificationsPlugin()
-        .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
-
-    if (!_notificationGranted) {
-      await androidPlugin?.requestNotificationsPermission();
-    }
-
-    if (!_alarmGranted) {
-      await androidPlugin?.requestExactAlarmsPermission();
-    }
-
-    if (_notificationGranted && _alarmGranted) {
-         ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(elevation: 6,
-            content: const Text("Sufficient Permissions Granted"),
-            behavior: SnackBarBehavior.floating,
-    margin: const EdgeInsets.fromLTRB(16, 0, 16, 100), // adds space from bottom
-    shape: RoundedRectangleBorder(
-      borderRadius: BorderRadius.circular(25), // pill shape
-    ),
-     // optional: make it pop
-    
-    duration: const Duration(seconds: 3),
-            
-            
-            ));
-    }
-
-    await Permission.ignoreBatteryOptimizations.request();
-
-    _checkPermissions(); // Update state
+  if (notifStatus.isDenied || notifStatus.isPermanentlyDenied) {
+    // You can show a fallback dialog if user declines
+    print("🔕 Notification permission denied.");
   }
+
+  // 🔄 Optional fallback (pre-Android 13 or custom behavior)
+  if (!(await AwesomeNotifications().isNotificationAllowed())) {
+    await AwesomeNotifications().requestPermissionToSendNotifications();
+  }
+
+  // 🔋 Ask for battery optimization
+  final batteryStatus = await Permission.ignoreBatteryOptimizations.request();
+
+  // 🔔 Ask for alarm permission (some devices need this for scheduling)
+  final alarmPlugin = FlutterLocalNotificationsPlugin()
+      .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
+  final alarmStatus = await alarmPlugin?.areNotificationsEnabled() ?? false;
+
+  final isNotifAllowed = await AwesomeNotifications().isNotificationAllowed();
+  final ignoresBattery = batteryStatus.isGranted;
+
+  setState(() {
+    _notificationGranted = isNotifAllowed;
+    _alarmGranted = alarmStatus;
+    _ignoresBatteryOptimizations = ignoresBattery;
+  });
+
+  if (_notificationGranted && _alarmGranted) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        elevation: 6,
+        content: const Text("Sufficient Permissions Granted"),
+        behavior: SnackBarBehavior.floating,
+        margin: const EdgeInsets.fromLTRB(16, 0, 16, 100),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(25),
+        ),
+        duration: const Duration(seconds: 3),
+      ),
+    );
+  }
+}
+
 
   Future<void> _requestNotificationPermission() async {
     if (await Permission.notification.isDenied) {

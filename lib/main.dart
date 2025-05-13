@@ -25,6 +25,10 @@ import 'Util/notification_helper.dart';
 // import 'dart:io';
 import 'home_page.dart'; // Import the new home.dart file
 
+
+//Decided name: JM2 Apps
+
+
 late final SharedPreferences prefs;
 
 //late var _notificationsPlugin;
@@ -110,7 +114,7 @@ Future<void> _initializeAppServices() async {
 
       await NotificationHelper.init();
 
-      await Workmanager().initialize(callbackDispatcher, isInDebugMode: false);
+     // await Workmanager().initialize(callbackDispatcher, isInDebugMode: false);
 
       //CHANGE THE 'true' IN THE ABOVE TO 'false' WHEN READY
 

@@ -106,8 +106,12 @@ class NotificationHelper {
 
           if (task.taskType == 'Repetitive') {
             debugPrint("✅ Task is repetitive");
+
+
             if (task.notificationsEnabled) {
               debugPrint("🔓 Notifications are enabled");
+
+
               if (!task.autoRepeat) {
                 debugPrint("🔁 Not auto-repeat mode, rescheduling...");
 
@@ -147,7 +151,7 @@ class NotificationHelper {
           debugPrint('Stop action for task $taskId');
 
           await DatabaseHelper()
-              .updateTask(task.copyWith(notificationsEnabled: false));
+              .updateTask(task.copyWith(notificationsEnabled: false, isActive: false));
           await markTaskAsDone(taskId);
           await Workmanager().cancelByUniqueName("repeating_task_$taskId");
           debugPrint("YOU HAVE STOPPED THIS TASK! 🛑");
@@ -159,7 +163,7 @@ class NotificationHelper {
         case 'ok_action':
           debugPrint('OK action for task $taskId');
           await DatabaseHelper()
-              .updateTask(task.copyWith(notificationsEnabled: false));
+              .updateTask(task.copyWith(notificationsEnabled: false, isActive: false));
           await markTaskAsDone(taskId);
           debugPrint("YOU HAVE PRESSED okayyyy for THIS TASK! 📮");
           break;
@@ -288,7 +292,7 @@ class NotificationHelper {
 */
 
   static Future<void> scheduleNotification(Task task) async {
-  if (task.notificationTime == null || !task.notificationsEnabled) return;
+  if (task.notificationTime == null || !task.notificationsEnabled || !task.isActive) return;
 
   final isRepetitive = task.taskType == "Repetitive";
   final scheduledTime = DateTime.fromMillisecondsSinceEpoch(task.notificationTime!);
@@ -298,11 +302,13 @@ class NotificationHelper {
   
   //await cancelNotification(createUniqueNotificationId(task.id!));
   await cancelNotification(task.id!);
-  await cancelWorkManagerTask(task.id!);
+ // await cancelWorkManagerTask(task.id!);
 
   debugPrint("Received task details. Name: ${task.name}");
 
   // For autorepeat tasks, use Workmanager + immediateNotif
+  //DEACTIVATED FOR NOW
+  /*
   if (isRepetitive && task.autoRepeat) {
     Duration frequency;
     switch (task.durationType) {
@@ -319,7 +325,7 @@ class NotificationHelper {
         frequency = const Duration(hours: 1);
     }
 
-    debugPrint("📡 Registering periodic task with WorkManager for task ${task.id}");
+  //  debugPrint("📡 Registering periodic task with WorkManager for task ${task.id}");
     
     // OLD: Cancel any existing workmanager task first
     //await Workmanager().cancelByUniqueName("repeating_task_${task.id}");
@@ -329,7 +335,7 @@ class NotificationHelper {
     // 2. Register periodic task with initialDelay = 15 seconds (for testing)
 
     
-      await Workmanager().registerPeriodicTask(
+  //    await Workmanager().registerPeriodicTask(
       "repeating_task_${task.id}",
       "repeatingTask",
       frequency: frequency,
@@ -346,7 +352,7 @@ class NotificationHelper {
     // Workmanager will handle the scheduling
     return;
   }
-
+*/
   // For non-auto-repeat tasks, use AwesomeNotifications
   final payload = {
     'taskId': task.id.toString(),
@@ -369,8 +375,14 @@ class NotificationHelper {
         body: task.details ?? 'Task reminder',
         payload: payload,
       ),
-      actionButtons: isRepetitive
-          ? [
+      actionButtons: isRepetitive ?
+
+      task.autoRepeat ? [NotificationActionButton(
+                key: 'stop_action',
+                label: 'Stop',
+                actionType: ActionType.SilentAction,
+                autoDismissible: true,
+              )] :  [
               NotificationActionButton(
                 key: 'continue_action',
                 label: 'Continue',
@@ -407,11 +419,19 @@ class NotificationHelper {
   Future<void> showAutoRepeatNotification(Task task) async {
       SharedPreferences prefs = await SharedPreferences.getInstance();
   String firstRunKey = 'task_${task.id}_hasRun';
-  
+
   bool hasRunBefore = prefs.getBool(firstRunKey) ?? false;
 
+  final payload = {
+    'taskId': task.id.toString(),
+    'taskType': task.taskType,
+    'durationType': task.durationType,
+    if (task.customInterval != null) 'customInterval': task.customInterval.toString(),
+  };
+
+
   String bodyMessage = hasRunBefore
-      ? "⏰ Time to do your task again!"
+      ? task.details == null ? "⏰ Time to do your task again!" : "⏰ ${task.details}"
       : "🔔 Task started! This is the first notification to confirm it’s running.";
     
   AwesomeNotifications().createNotification(
@@ -420,6 +440,7 @@ class NotificationHelper {
       channelKey: 'task_channel',
       title: task.name,
       body: bodyMessage,
+      payload: payload,
       notificationLayout: NotificationLayout.Default,
     ),
     actionButtons: [NotificationActionButton(

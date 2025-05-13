@@ -33,9 +33,9 @@ class Task {
       'task_type': taskType,
       'duration_type': durationType,
       'auto_repeat' : autoRepeat ? 1 : 0,
+      'is_active': isActive ? 1 : 0,
       'custom_interval': customInterval,
       'notification_time': notificationTime,
-      'is_active': isActive,
       'notifications_enabled': notificationsEnabled ? 1 : 0,
     };
   }
