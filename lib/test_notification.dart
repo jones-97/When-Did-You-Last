@@ -13,7 +13,7 @@ class _TestNotificationScreenState extends State<TestNotificationScreen> {
   // Create test tasks with proper IDs (use negative numbers for test IDs)
   final onceTask = Task(
     id: 102, // Temporary test ID
-    name: "One-Time Test Notification",
+    name: "One-Time Notification TEST",
     taskType: "One-Time",
     durationType: "Minutes",
     notificationTime:
@@ -23,7 +23,7 @@ class _TestNotificationScreenState extends State<TestNotificationScreen> {
 
   final repeatTask = Task(
     id: 202, // Temporary test ID
-    name: "Repetitive Test Notification INPUT",
+    name: "Manual Repetitive Notification TEST",
     taskType: "Repetitive",
     durationType: "Minutes",
     autoRepeat: false,
@@ -35,8 +35,9 @@ class _TestNotificationScreenState extends State<TestNotificationScreen> {
 
   final ptTask = Task(
     //THIS IS THE REAL 15-MIN ONE
+    //For workmanager purposes
     id: 312,
-    name: "Real Payload Test Notification",
+    name: "Real 15-MIN Payload Notification TEST",
     taskType: "Repetitive",
     durationType: "Minutes",
     notificationsEnabled: true,
@@ -48,13 +49,13 @@ class _TestNotificationScreenState extends State<TestNotificationScreen> {
 
   final payloadTask = Task(
   id: 402,
-  name: "Test Auto-Repeat Simulation",
+  name: "Auto-Repeat Simulation TEST",
   taskType: "Repetitive",
   durationType: "Minutes",
   autoRepeat: true, // keep this true to mimic a real scenario
   notificationsEnabled: true,
   notificationTime:
-      DateTime.now().add(const Duration(seconds: 10)).millisecondsSinceEpoch,
+      DateTime.now().add(const Duration(seconds: 30)).millisecondsSinceEpoch,
   customInterval: 1,
 );
 
@@ -123,7 +124,10 @@ class _TestNotificationScreenState extends State<TestNotificationScreen> {
     await DatabaseHelper().insertTask(payloadTask);
     await NotificationHelper.scheduleNotification(payloadTask);
 
+    //REMOVED
     // Simulate WorkManager by manually triggering repeat every 30s
+
+    /*
     Future.doWhile(() async {
       await Future.delayed(const Duration(seconds: 30));
 
@@ -140,8 +144,11 @@ class _TestNotificationScreenState extends State<TestNotificationScreen> {
       await NotificationHelper.scheduleNotification(updated);
 
       return true; // continue repeating
-    });
-
+      
+    }
+    
+    );
+*/
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text("Simulated auto-repeat started!")),
     );

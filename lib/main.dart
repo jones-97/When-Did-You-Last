@@ -14,6 +14,7 @@ import 'package:android_intent_plus/flag.dart';
 import 'package:when_did_you_last/Util/loading_screen.dart';
 import 'package:when_did_you_last/app_lifecycle_manager.dart';
 import 'package:when_did_you_last/intro_permissions.dart';
+import 'package:when_did_you_last/tutorial_screen.dart';
 import 'package:workmanager/workmanager.dart';
 // import 'dart:io';
 // import 'package:when_did_you_last/settings.dart';
@@ -306,7 +307,7 @@ class MyApp extends StatelessWidget {
         future: _loadEverything(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.done) {
-            return kIsWeb ? const MyHomePage() : showIntro ? const IntroPermissionsScreen() : const MyHomePage(); // Set HomeScreen as the main screen
+            return kIsWeb ? const MyHomePage()  : showIntro ? const IntroPermissionsScreen() : const MyHomePage(); // Set HomeScreen as the main screen
           } else {
             return const LoadingScreen(); // Show spinner while waiting
           }        

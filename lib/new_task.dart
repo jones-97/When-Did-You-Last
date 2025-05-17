@@ -457,7 +457,7 @@ class _NewTaskState extends State<NewTask> {
                           SwitchListTile(
                               title: Text("Enable auto-repetition?"),
                               subtitle: Text(
-                                  "Clicking this option will have the task automatically rescheduled regardless of pressing the 'Continue' notification button"),
+                                  " Clicking this option will have the task automatically \n rescheduled unless the user presses 'Stop' on the \n task's notification body."),
                               value: _autoRepeat,
                               onChanged: (value) =>
                                   setState(() => _autoRepeat = value))

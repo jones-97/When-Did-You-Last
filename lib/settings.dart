@@ -239,8 +239,8 @@ void _openAndroidNotificationSettings() async {
             },
           ),
           ListTile(
-  title: const Text("Prevent App from Being Killed"),
-  subtitle: const Text("Allow this app to run in the background for notifications to work."),
+  title: const Text("Revisit Battery Permissions"),
+  subtitle: const Text("Alter battery optimization settings. Results may vary with devices."),
   trailing: const Icon(Icons.settings),
   onTap: () async {
     const intent =  AndroidIntent(

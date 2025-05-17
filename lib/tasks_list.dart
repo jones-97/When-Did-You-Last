@@ -195,7 +195,7 @@ class _TasksListState extends State<TasksList> {
 
 // Past tasks - completed at least once (regardless of notification status)
       pastTasks = _tasks.where((task) {
-  if (task.taskType == "No Alert/Tracker") return false;
+  if (task.taskType == "No Alert/Tracker" || task.isActive) return false;
 
   final completions = _taskCompletionDates[task.id!] ?? [];
   final todayStr = now.toIso8601String().substring(0, 10);
@@ -206,6 +206,8 @@ class _TasksListState extends State<TasksList> {
 
   return wasCompleted || hasPastNotificationTime;
 }).toList();
+
+
 
   // pastTasks = _tasks.where((task) {
   //      if (task.taskType == "No Alert/Tracker")

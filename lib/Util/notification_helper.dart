@@ -39,9 +39,8 @@ class NotificationHelper {
     onNotificationCreatedMethod: (ReceivedNotification notification) async {
       debugPrint('Notification created: ${notification.id}');
     },
-    onNotificationDisplayedMethod: (ReceivedNotification notification) async {
-      debugPrint('Notification displayed: ${notification.id}');
-    },
+      onNotificationDisplayedMethod: _handleAutoRepeatDisplay,
+     
     onActionReceivedMethod: _onActionReceived,
   );
 
@@ -137,6 +136,7 @@ class NotificationHelper {
                 await scheduleNotification(updated);
               } else {
                 debugPrint("🚫 Skipping because task is autoRepeat");
+                await scheduleNotification(task);
               }
             } else {
               debugPrint("🚫 Skipping because notifications enabled is false");
@@ -177,6 +177,35 @@ class NotificationHelper {
       debugPrintStack(stackTrace: StackTrace.fromString(e.toString()));
     }
   }
+
+@pragma('vm:entry-point')
+static Future<void> _handleAutoRepeatDisplay(ReceivedNotification notification) async {
+  
+    debugPrint('Notification ${notification.id} displayed - no rescheduling needed');
+
+  // final taskId = int.tryParse(notification.payload?['taskId'] ?? '');
+  // if (taskId == null) return;
+
+  // final task = await DatabaseHelper().getTaskById(taskId);
+  // if (task == null || !task.autoRepeat || !task.notificationsEnabled) return;
+
+  // // Calculate next time based on original schedule, not current time
+  // final originalTime = DateTime.fromMillisecondsSinceEpoch(task.notificationTime!);
+  // final nextTime = originalTime.add(Duration(
+  //   minutes: task.durationType == 'Minutes' ? task.customInterval ?? 1 : 0,
+  //   hours: task.durationType == 'Hours' ? task.customInterval ?? 1 : 0,
+  //   days: task.durationType == 'Days' ? task.customInterval ?? 1 : 0,
+  // ));
+
+  // debugPrint("🔁 Auto-repeat scheduled at $nextTime after display");
+  
+  // // Update task with new notification time
+  // final updated = task.copyWith(notificationTime: nextTime.millisecondsSinceEpoch);
+  // await DatabaseHelper().updateTask(updated);
+  
+  // // Schedule the next notification
+  // await NotificationHelper.scheduleNotification(updated);
+}
 
   // // Additional tracking
   // debugPrint("Button Pressed: ${action.buttonKeyPressed}");
@@ -290,70 +319,31 @@ class NotificationHelper {
     }
   }
 */
+  
+  static Future<void> scheduleNotification(Task task, {bool rescheduleAfterTrigger = false}) async {
+  if (task.notificationTime == null || !task.notificationsEnabled) return;
 
-  static Future<void> scheduleNotification(Task task) async {
-  if (task.notificationTime == null || !task.notificationsEnabled || !task.isActive) return;
+    await cancelNotification(task.id!);
 
   final isRepetitive = task.taskType == "Repetitive";
-  final scheduledTime = DateTime.fromMillisecondsSinceEpoch(task.notificationTime!);
   final now = DateTime.now();
 
-  // Cancel any existing notifications for this task first
+  DateTime scheduledTime = _calculateNextOccurrence(task, now);
+  //DateTime.fromMillisecondsSinceEpoch(task.notificationTime!);
   
-  //await cancelNotification(createUniqueNotificationId(task.id!));
-  await cancelNotification(task.id!);
- // await cancelWorkManagerTask(task.id!);
 
-  debugPrint("Received task details. Name: ${task.name}");
-
-  // For autorepeat tasks, use Workmanager + immediateNotif
-  //DEACTIVATED FOR NOW
-  /*
-  if (isRepetitive && task.autoRepeat) {
-    Duration frequency;
-    switch (task.durationType) {
-      case "Minutes":
-        frequency = Duration(minutes: task.customInterval ?? 15);
-        break;
-      case "Hours":
-        frequency = Duration(hours: task.customInterval ?? 1);
-        break;
-      case "Days":
-        frequency = Duration(days: task.customInterval ?? 1);
-        break;
-      default:
-        frequency = const Duration(hours: 1);
+   // If notification is in the past and it's auto-repeat, schedule next occurrence
+  if (scheduledTime.isBefore(now)) {
+    if (task.autoRepeat && task.taskType == "Repetitive") {
+      scheduledTime = _calculateNextOccurrence(task, now);
+      final updated = task.copyWith(notificationTime: scheduledTime.millisecondsSinceEpoch);
+      await DatabaseHelper().updateTask(updated);
+      task = updated;
+    } else {
+      return; // Skip past one-time notifications
     }
-
-  //  debugPrint("📡 Registering periodic task with WorkManager for task ${task.id}");
-    
-    // OLD: Cancel any existing workmanager task first
-    //await Workmanager().cancelByUniqueName("repeating_task_${task.id}");
-       // 1. Create immediate notification first
-  //  await _createAutoRepeatNotification(task);
-
-    // 2. Register periodic task with initialDelay = 15 seconds (for testing)
-
-    
-  //    await Workmanager().registerPeriodicTask(
-      "repeating_task_${task.id}",
-      "repeatingTask",
-      frequency: frequency,
-     // initialDelay: const Duration(seconds: 15), //REMOVE THIS AFTER TESTING!
-      inputData: {'taskId': task.id},
-      constraints: Constraints(networkType: NetworkType.not_required, requiresBatteryNotLow: false),
-    );
-
-  
-    
-    
-    
-    // Don't create an AwesomeNotification for auto-repeat tasks
-    // Workmanager will handle the scheduling
-    return;
   }
-*/
-  // For non-auto-repeat tasks, use AwesomeNotifications
+
   final payload = {
     'taskId': task.id.toString(),
     'taskType': task.taskType,
@@ -362,60 +352,97 @@ class NotificationHelper {
   };
 
   try {
-   // final newTaskId = createUniqueNotificationId(task.id!); //NOT USED
+    debugPrint("📅 Scheduling notification for task ID ${task.id} at $scheduledTime");
 
-   // debugPrint("Creating a notification with new Id: $newTaskId");
-   debugPrint("ScheduleNotification method. Creating a notification with id: ${task.id}");
-
+    // Create the notification with appropriate buttons
     await AwesomeNotifications().createNotification(
       content: NotificationContent(
-        id: task.id!, //newTaskId was here
+        id: task.id!,
         channelKey: 'task_channel',
         title: task.name,
         body: task.details ?? 'Task reminder',
         payload: payload,
+        notificationLayout: NotificationLayout.Default,
+        wakeUpScreen: true, // Add this to ensure notification appears
+        //criticalAlert: true, // For iOS to show even in DND mode
       ),
-      actionButtons: isRepetitive ?
-
-      task.autoRepeat ? [NotificationActionButton(
-                key: 'stop_action',
-                label: 'Stop',
-                actionType: ActionType.SilentAction,
-                autoDismissible: true,
-              )] :  [
-              NotificationActionButton(
-                key: 'continue_action',
-                label: 'Continue',
-                actionType: ActionType.SilentAction,
-                autoDismissible: true,
-              ),
-              NotificationActionButton(
-                key: 'stop_action',
-                label: 'Stop',
-                actionType: ActionType.SilentAction,
-                autoDismissible: true,
-              ),
-            ]
-          : [
-              NotificationActionButton(
-                key: 'ok_action',
-                label: 'OK',
-                actionType: ActionType.SilentAction,
-                autoDismissible: true,
-              ),
-            ],
-      schedule: NotificationCalendar.fromDate(
-        date: scheduledTime,
-        allowWhileIdle: true,
-        preciseAlarm: true,
-      ),
+      actionButtons: _getActionButtons(task),
+      schedule:  task.autoRepeat
+          ? NotificationInterval(
+              interval: Duration(seconds: _getIntervalInSeconds(task)),
+              repeats: true,
+              preciseAlarm: true,
+            )
+          : NotificationCalendar.fromDate(
+              date: scheduledTime,
+              allowWhileIdle: true,
+              preciseAlarm: true,
+            ),
     );
   } catch (e, stack) {
-    debugPrint("Error in CREATING notification: $e");
+    debugPrint("❌ Error in CREATING notification: $e");
     debugPrintStack(stackTrace: stack);
   }
 }
 
+static List<NotificationActionButton> _getActionButtons(Task task) {
+  if (task.taskType != "Repetitive") {
+    return [
+      NotificationActionButton(
+        key: 'ok_action',
+        label: 'OK',
+        actionType: ActionType.SilentAction,
+        autoDismissible: true,
+      ),
+    ];
+  }
+
+  return task.autoRepeat
+      ? [
+          NotificationActionButton(
+            key: 'stop_action',
+            label: 'Stop',
+            actionType: ActionType.SilentAction,
+            autoDismissible: true,
+          )
+        ]
+      : [
+          NotificationActionButton(
+            key: 'continue_action',
+            label: 'Continue',
+            actionType: ActionType.SilentAction,
+            autoDismissible: true,
+          ),
+          NotificationActionButton(
+            key: 'stop_action',
+            label: 'Stop',
+            actionType: ActionType.SilentAction,
+            autoDismissible: true,
+          ),
+        ];
+}
+  static DateTime _calculateNextOccurrence(Task task, DateTime fromDate) {
+  return fromDate.add(Duration(
+    minutes: task.durationType == 'Minutes' ? task.customInterval ?? 1 : 0,
+    hours: task.durationType == 'Hours' ? task.customInterval ?? 1 : 0,
+    days: task.durationType == 'Days' ? task.customInterval ?? 1 : 0,
+  ));
+}
+
+static int _getIntervalInSeconds(Task task) {
+  switch (task.durationType) {
+    case "Minutes":
+      return (task.customInterval ?? 1) * 60;
+    case "Hours":
+      return (task.customInterval ?? 1) * 3600;
+    case "Days":
+      return (task.customInterval ?? 1) * 86400;
+    default:
+      return 60; // Default to 1 minute
+  }
+}
+  
+  
   Future<void> showAutoRepeatNotification(Task task) async {
       SharedPreferences prefs = await SharedPreferences.getInstance();
   String firstRunKey = 'task_${task.id}_hasRun';
