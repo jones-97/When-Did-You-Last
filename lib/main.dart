@@ -26,9 +26,7 @@ import 'Util/notification_helper.dart';
 // import 'dart:io';
 import 'home_page.dart'; // Import the new home.dart file
 
-
 //Decided name: JM2 Apps
-
 
 late final SharedPreferences prefs;
 
@@ -50,9 +48,9 @@ final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 */
 
 Future<bool> _loadEverything() async {
-    await _initializeAppServices();
-    return true;
-  }
+  await _initializeAppServices();
+  return true;
+}
 
 Future<void> _requestNotificationPermission() async {
   if (await Permission.notification.isDenied) {
@@ -87,18 +85,18 @@ Future<void> _requestNotificationPermission() async {
 
 void main() async {
   try {
-    WidgetsFlutterBinding.ensureInitialized(); 
+    WidgetsFlutterBinding.ensureInitialized();
     // Ensures Flutter is fully initialized
-    
+
     prefs = await SharedPreferences.getInstance();
     final introShown = prefs.getBool('intro_shown') ?? false;
 
     await _initializeAppServices();
 
     runApp(ChangeNotifierProvider(
-        create: (context) => ThemeProvider(), child: MyApp(showIntro: !introShown))
-        );
-  
+        create: (context) => ThemeProvider(),
+        child: MyApp(showIntro: !introShown)));
+
     //   if (Platform.isWindows || Platform.isLinux) {
     //   // Initialize FFI
     //   sqfliteFfiInit();
@@ -115,17 +113,17 @@ Future<void> _initializeAppServices() async {
 
       await NotificationHelper.init();
 
-     // await Workmanager().initialize(callbackDispatcher, isInDebugMode: false);
+      await Workmanager().initialize(callbackDispatcher, isInDebugMode: false);
 
       //CHANGE THE 'true' IN THE ABOVE TO 'false' WHEN READY
 
       //Request PERMISSIONS:
       //THESE THREE COMMENTED OUT BECAUSE MOVED TO PERMISSIONS SCREEN
 
-    //   await _requestNotificationPermission();
-    //   await _checkExactAlarmPermission();
-    // //  await _requestExactAlarmPermission();
-    //   _requestBatteryOptimization();
+      //   await _requestNotificationPermission();
+      //   await _checkExactAlarmPermission();
+      // //  await _requestExactAlarmPermission();
+      //   _requestBatteryOptimization();
     }
 
     // Initialize the database before running the app
@@ -139,7 +137,6 @@ Future<void> _initializeAppServices() async {
   } catch (e) {
     debugPrint("FAilure intiailizing app services, THE FAILURE: $e");
   }
-
 }
 
 Future<void> _requestBatteryOptimization() async {
@@ -159,78 +156,106 @@ Future<void> _requestBatteryOptimization() async {
 
 @pragma('vm:entry-point')
 void callbackDispatcher() {
-  Workmanager().executeTask((task, inputData) async {
+  Workmanager().executeTask((taskName, inputData) async {
     try {
-      WidgetsFlutterBinding.ensureInitialized();
+      /* WidgetsFlutterBinding.ensureInitialized();
       tz.initializeTimeZones();
+      */
 
       // Initialize notifications plugin in this isolate
-      
+
       await NotificationHelper.initializeForBackground();
+      final prefs = await SharedPreferences.getInstance();
 
       // Keep background service alive
-      int? taskId = inputData?['taskId'];
+      final taskId = int.parse(inputData!['taskId'].toString());
 
-       final prefs = await SharedPreferences.getInstance();
-    final hasRunBefore = prefs.getBool('task_${taskId}_hasRun') ?? false;
+      
+      final hasRunBefore = prefs.getBool('task_${taskId}_hasRun') ?? false;
 
-    if (!hasRunBefore) {
-      await prefs.setBool('task_${taskId}_hasRun', true);
-      // Skip first run
-      return Future.value(true);
-    }
+      if (!hasRunBefore) {
+        await prefs.setBool('task_${taskId}_hasRun', true);
+        // Skip first run
+        return Future.value(true);
+      }
+
+      final task = await DatabaseHelper().getTaskById(taskId);
+
+      if (task != null && task.notificationsEnabled) {
+        await NotificationHelper().showAutoRepeatNotification(task);
+
+         // Reschedule if auto-repeat is enabled
+        if (task.autoRepeat) {
+          await _rescheduleTask(task);
+        }
+      }
 
 
-
-      if (taskId != null) {
-        final task = await DatabaseHelper().getTaskById(taskId);
+      /*  final task = await DatabaseHelper().getTaskById(taskId);
         final DateTime nextTime;
         if (task != null && task.notificationsEnabled && task.autoRepeat) {
           // await NotificationHelper.scheduleNotification(task);
-          debugPrint("📡 WorkMANAGER periodic task SET FROM MAIN with WorkManager for task ${task.id}");
-          
-          
+          debugPrint(
+              "📡 WorkMANAGER periodic task SET FROM MAIN with WorkManager for task ${task.id}");
+
           //await NotificationHelper.createImmediateNotification(task);
           // Only reschedule - don't show immediate notification
           if (task.durationType == "Hours") {
-            nextTime = DateTime.now().add(
-              Duration(hours: task.customInterval ?? 1)
-               );
+            nextTime =
+                DateTime.now().add(Duration(hours: task.customInterval ?? 1));
           } else if (task.durationType == "Days") {
-            nextTime = DateTime.now().add(
-              Duration(days: task.customInterval ?? 1)
-               );
+            nextTime =
+                DateTime.now().add(Duration(days: task.customInterval ?? 1));
           } else {
-            nextTime = DateTime.now().add(
-              Duration(minutes: task.customInterval ?? 15)
-               );
+            nextTime = DateTime.now()
+                .add(Duration(minutes: task.customInterval ?? 15));
           }
-           
+
           await DatabaseHelper().updateTask(
-            task.copyWith(notificationTime: nextTime.millisecondsSinceEpoch)
-          );
+              task.copyWith(notificationTime: nextTime.millisecondsSinceEpoch));
           debugPrint("🔔 About to show notification for task ${taskId}");
 
           await NotificationHelper().showAutoRepeatNotification(task);
-
-          
         }
       }
-      return Future.value(true);
+      */
+      return true;
     } catch (e) {
-      debugPrint("Running background task with workmanager failed: $e");
-      return Future.error(e);
+      debugPrint("Background WorkManager Task FAILURE: $e");
+      return false; //Future.error(e)
     }
   });
+}
+
+Future<void> _rescheduleTask(Task task) async {
+  final nextTime = DateTime.now().add(Duration(
+    minutes: task.durationType == 'Minutes' ? task.customInterval ?? 1 : 0,
+    hours: task.durationType == 'Hours' ? task.customInterval ?? 1 : 0,
+    days: task.durationType == 'Days' ? task.customInterval ?? 1 : 0,
+  ));
+  
+  await DatabaseHelper().updateTask(
+    task.copyWith(notificationTime: nextTime.millisecondsSinceEpoch),
+  );
+  
+  await Workmanager().registerOneOffTask(
+    'repeat_${task.id}_${DateTime.now().millisecondsSinceEpoch}',
+    'notification_task',
+    inputData: {'taskId': task.id},
+    initialDelay: Duration(minutes: task.customInterval ?? 1),
+    constraints: Constraints(networkType: NetworkType.not_required),
+  );
 }
 
 Future<void> _checkExactAlarmPermission() async {
   if (await AwesomeNotifications().isNotificationAllowed() == false) {
     await AwesomeNotifications().requestPermissionToSendNotifications();
   }
-  
-  
-  if (await DeviceInfoPlugin().androidInfo.then((info) => info.version.sdkInt) >= 31) {
+
+  if (await DeviceInfoPlugin()
+          .androidInfo
+          .then((info) => info.version.sdkInt) >=
+      31) {
     if (!await AwesomeNotifications().isNotificationAllowed()) {
       const intent = AndroidIntent(
         action: 'android.settings.REQUEST_SCHEDULE_EXACT_ALARM',
@@ -287,62 +312,57 @@ Future<int> getAndroidSdkVersion() async {
 }
 
 class MyApp extends StatelessWidget {
-  
-    final bool showIntro;
+  final bool showIntro;
   const MyApp({super.key, required this.showIntro});
 
   @override
   Widget build(BuildContext context) {
     return Consumer<ThemeProvider>(builder: (context, themeProvider, child) {
       if (!kIsWeb) {
-      return AppLifecycleManager(
-        child: MaterialApp(
-        navigatorKey: navigatorKey,
-        debugShowCheckedModeBanner: false,
-        title: 'When Did You Last?',
-        theme: ThemeData.light(),
-        darkTheme: ThemeData.dark(),
-        themeMode: themeProvider.isDarkMode ? ThemeMode.dark : ThemeMode.light,
-        home: FutureBuilder<bool>(
-        future: _loadEverything(),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.done) {
-            return kIsWeb ? const MyHomePage()  : showIntro ? const IntroPermissionsScreen() : const MyHomePage(); // Set HomeScreen as the main screen
-          } else {
-            return const LoadingScreen(); // Show spinner while waiting
-          }        
+        return AppLifecycleManager(
+            child: MaterialApp(
+                navigatorKey: navigatorKey,
+                debugShowCheckedModeBanner: false,
+                title: 'When Did You Last?',
+                theme: ThemeData.light(),
+                darkTheme: ThemeData.dark(),
+                themeMode:
+                    themeProvider.isDarkMode ? ThemeMode.dark : ThemeMode.light,
+                home: FutureBuilder<bool>(
+                    future: _loadEverything(),
+                    builder: (context, snapshot) {
+                      if (snapshot.connectionState == ConnectionState.done) {
+                        return kIsWeb
+                            ? const MyHomePage()
+                            : showIntro
+                                ? const IntroPermissionsScreen()
+                                : const MyHomePage(); // Set HomeScreen as the main screen
+                      } else {
+                        return const LoadingScreen(); // Show spinner while waiting
+                      }
+                    })));
+      } else {
+        return MaterialApp(
+            navigatorKey: navigatorKey,
+            debugShowCheckedModeBanner: false,
+            title: 'When Did You Last?',
+            theme: ThemeData.light(),
+            darkTheme: ThemeData.dark(),
+            themeMode:
+                themeProvider.isDarkMode ? ThemeMode.dark : ThemeMode.light,
+            home: FutureBuilder<bool>(
+                future: _loadEverything(),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.done) {
+                    return const MyHomePage();
+                  } else {
+                    return const LoadingScreen(); // Show spinner while waiting
+                  }
+                })
+
+            // const MyHomePage(), // Set HomeScreen as the main screen
+            );
       }
-        )
-      )
-      );
-    }
-  
-  else {
-    return MaterialApp(navigatorKey: navigatorKey,
-        debugShowCheckedModeBanner: false,
-        title: 'When Did You Last?',
-        theme: ThemeData.light(),
-        darkTheme: ThemeData.dark(),
-        themeMode: themeProvider.isDarkMode ? ThemeMode.dark : ThemeMode.light,
-        home: FutureBuilder<bool>(
-        future: _loadEverything(),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.done) {
-            return const MyHomePage();
-          } else {
-            return const LoadingScreen(); // Show spinner while waiting
-          }
-        }
-        )
-        
-        
-        
-        
-        
-       // const MyHomePage(), // Set HomeScreen as the main screen
-    );
+    });
   }
-  });
-  }
-  
 }
