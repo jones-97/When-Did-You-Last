@@ -42,6 +42,7 @@ class DatabaseHelper {
           await db.execute('''
   CREATE TABLE IF NOT EXISTS tasks (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
+    notification_id INT,
     name TEXT NOT NULL,
     details TEXT,
   
@@ -76,13 +77,13 @@ class DatabaseHelper {
           FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE
         )
       ''');
-      debugPrint("Database creation successfult");
+      debugPrint("DATABASE:: Database creation successfult");
     },
    
   );
 }
         catch (e) {
-      debugPrint("Database initialization error: $e");
+      debugPrint("DATABASE:: Database initialization error: $e");
       rethrow;
     }
   }
@@ -90,14 +91,14 @@ class DatabaseHelper {
   // Insert a Task
   Future<int> insertTask(Task task) async {
     try {
-      debugPrint("Task inserted successfully!");
+      debugPrint("DATABASE:: Task inserted successfully!");
       final db = await database;
       return await db.insert('tasks', task.toMap(),
           conflictAlgorithm: ConflictAlgorithm.replace);
           
           
     } catch (e) {
-      debugPrint("Error inserting task: $e");
+      debugPrint("DATABASE:: Error inserting task: $e");
       rethrow;
     }
     
@@ -110,7 +111,7 @@ class DatabaseHelper {
       final List<Map<String, dynamic>> maps = await db.query('tasks');
       return maps.map((map) => Task.fromMap(map)).toList();
     } catch (e) {
-      debugPrint("Error retrieving tasks: $e");
+      debugPrint("DATABASE:: Error retrieving tasks: $e");
       rethrow;
     }
   }
@@ -119,10 +120,15 @@ class DatabaseHelper {
   Future<int> updateTask(Task task) async {
     try {
       final db = await database;
+      debugPrint("DATABASE:: Updating Task details...");
+      debugPrint("DATABASE:: IMPORTANT TASK DETAILS: name is ${task.name}," + 
+      "id is ${task.id.toString()}, notifId is ${task.notificationId.toString()}, custom interval is ${task.customInterval.toString()}," +
+      "notification time is ${task.notificationTime.toString()}");
+      
       return await db.update('tasks', task.toMap(),
           where: 'id = ?', whereArgs: [task.id]);
     } catch (e) {
-      debugPrint("Error updating task: $e");
+      debugPrint("DATABASE:: Error updating task: $e");
       rethrow;
     }
   }
@@ -133,7 +139,7 @@ class DatabaseHelper {
       final db = await database;
       return await db.delete('tasks', where: 'id = ?', whereArgs: [id]);
     } catch (e) {
-      debugPrint("Error deleting task: $e");
+      debugPrint("DATABASE:: Error deleting task: $e");
       rethrow;
     }
   }
@@ -152,7 +158,7 @@ Future<void> pauseTask(int taskId) async {
     ''',
     [taskId]);
     } catch (e) {
-      debugPrint("Error pausing task: $e");
+      debugPrint("DATABASE:: Error pausing task: $e");
       rethrow;
     }
 }
@@ -170,7 +176,7 @@ Future<void> resumeTask (int taskId) async {
     ''',
     [taskId]);
     } catch (e) {
-      debugPrint("Error resuming task: $e");
+      debugPrint("DATABASE:: Error resuming task: $e");
       rethrow;
     }
 }
@@ -185,7 +191,7 @@ Future<void> markTaskDone(int taskId, String date) async {
     conflictAlgorithm: ConflictAlgorithm.ignore, // Prevent duplicates
   );
   } catch (e) {
-    debugPrint("Error marking a task as done: $e");
+    debugPrint("DATABASE:: Error marking a task as done: $e");
   }
 }
 
@@ -199,7 +205,7 @@ Future<void> unmarkTaskDone(int taskId, String date) async {
     whereArgs: [taskId, date],
   );
   } catch (e) {
-    debugPrint("Error unmarking or making a task NOT DONE: $e");
+    debugPrint("DATABASE:: Error unmarking or making a task NOT DONE: $e");
   }
 }
 
@@ -209,9 +215,9 @@ Future<void> removeFromCompletionDates(int taskId) async {
     await db.delete('completed_tasks',
     where: 'task_id = ?',
     whereArgs: [taskId]);
-    debugPrint("Successfully removed task from the completion table.");
+    debugPrint("DATABASE:: Successfully removed task from the completion table.");
   } catch (e) {
-    debugPrint("Error removing task from the completed tasks table: $e");
+    debugPrint("DATABASE:: Error removing task from the completed tasks table: $e");
   }
 }
 
@@ -226,7 +232,7 @@ Future<List<String>> getTaskCompletionDates(int taskId) async {
   );
   return results.map((row) => row['completed_date'].toString()).toList();
   } catch (e) {
-    debugPrint("Error getting a task's completion dates: $e");
+    debugPrint("DATABASE:: Error getting a task's completion dates: $e");
     return [];
   }
 }

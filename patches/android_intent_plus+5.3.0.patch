@@ -1,0 +1,26 @@
+diff --git a/android/src/test/java/io/flutter/plugins/androidintent/MethodCallHandlerImplTest.java b/android/src/test/java/io/flutter/plugins/androidintent/MethodCallHandlerImplTest.java
+--- a/android/src/test/java/io/flutter/plugins/androidintent/MethodCallHandlerImplTest.java
++++ b/android/src/test/java/io/flutter/plugins/androidintent/MethodCallHandlerImplTest.java
+@@ -4,8 +4,11 @@
+ import static org.junit.Assert.assertNull;
+ import static org.junit.Assert.assertTrue;
+ import static org.mockito.Mockito.mock;
+-import static org.mockito.Matchers.any;
+-import static org.mockito.Matchers.eq;
++import static org.mockito.ArgumentMatchers.any;
++import static org.mockito.ArgumentMatchers.eq;
++
++import dev.fluttercommunity.plus.androidintent.IntentSender;
++import dev.fluttercommunity.plus.androidintent.MethodCallHandlerImpl;
+ 
+ import io.flutter.plugin.common.BinaryMessenger;
+ import io.flutter.plugin.common.BinaryMessenger.BinaryMessageHandler;
+@@ -40,8 +43,7 @@
+ 
+   @Before
+   public void setUp() {
+-    sender = new IntentSender(null, null);
+-    methodCallHandler = new MethodCallHandlerImpl(sender);
++    sender = mock(IntentSender.class);
++    methodCallHandler = new MethodCallHandlerImpl(sender);
+   }

@@ -1,4 +1,4 @@
-package com.example.when_did_you_last
+package com.example.temp_project
 
 import io.flutter.embedding.android.FlutterActivity
 

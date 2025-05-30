@@ -290,7 +290,11 @@ class _TasksListState extends State<TasksList> {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (_) => const IntroPermissionsScreen(),
+                    builder: (_) =>  IntroPermissionsScreen(
+                      onComplete: () {
+                        Navigator.pop(context);
+                      },
+                    ),
                   ),
                 );
               } else if (value == 'Tutorial') {

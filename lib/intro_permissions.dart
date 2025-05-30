@@ -1,17 +1,16 @@
 import 'package:awesome_notifications/awesome_notifications.dart';
+import 'package:device_info_plus/device_info_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:android_intent_plus/android_intent.dart';
 import 'dart:io' show Platform;
 import 'package:flutter/foundation.dart' show kIsWeb;
 
-import 'package:when_did_you_last/home_page.dart';
-import 'package:when_did_you_last/tutorial_screen.dart';
-
 class IntroPermissionsScreen extends StatefulWidget {
-  const IntroPermissionsScreen({super.key});
+  final VoidCallback onComplete;
+
+  const IntroPermissionsScreen({super.key, required this.onComplete});
 
   @override
   State<IntroPermissionsScreen> createState() => _IntroPermissionsScreenState();
@@ -21,6 +20,9 @@ class _IntroPermissionsScreenState extends State<IntroPermissionsScreen> {
   bool _notificationGranted = false;
   bool _alarmGranted = false;
   bool _ignoresBatteryOptimizations = false;
+
+  //older
+  bool _isLoading = false;
 
   @override
   void initState() {
@@ -32,80 +34,96 @@ class _IntroPermissionsScreenState extends State<IntroPermissionsScreen> {
 
   Future<void> _checkPermissions() async {
     if (Platform.isAndroid) {
-      final androidPlugin = FlutterLocalNotificationsPlugin()
-          .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
+      setState(() => _isLoading = true);
 
-      final granted = await androidPlugin?.areNotificationsEnabled() ?? false;
-      final alarmGranted = await androidPlugin?.requestExactAlarmsPermission() ?? false;
+      // Check notification permission
+      final notificationAllowed =
+          await AwesomeNotifications().isNotificationAllowed();
 
-      final intent = AndroidIntent(
-        action: 'android.settings.IGNORE_BATTERY_OPTIMIZATION_SETTINGS',
-      );
+      // Check exact alarm permission (Android 12+)
+      bool alarmAllowed = false;
+      final androidInfo = await DeviceInfoPlugin().androidInfo;
+      if (androidInfo.version.sdkInt >= 31) {
+        alarmAllowed = await Permission.scheduleExactAlarm.isGranted;
+      } else {
+        alarmAllowed = true; // Not needed below Android 12
+      }
 
       // Check battery optimization status
-      final status = await Permission.ignoreBatteryOptimizations.status;
-      final ignoresBattery = status.isGranted;
+      final batteryStatus = await Permission.ignoreBatteryOptimizations.status;
 
       setState(() {
-        _notificationGranted = granted;
-        _alarmGranted = alarmGranted;
-        _ignoresBatteryOptimizations = ignoresBattery;
+        _notificationGranted = notificationAllowed;
+        _alarmGranted = alarmAllowed;
+        _ignoresBatteryOptimizations = batteryStatus.isGranted;
+        _isLoading = false;
       });
+    }
+    }
+  
+
+  Future<void> _requestPermissions() async {
+    //older
+    setState(() => _isLoading = true);
+
+    try {
+      // 1. Request notification permission (shows system dialog immediately)
+      if (Platform.isAndroid) {
+        // First try the standard permission handler
+        var notificationStatus = await Permission.notification.request();
+
+        // Then fallback to AwesomeNotifications dialog if needed
+        if (!await AwesomeNotifications().isNotificationAllowed()) {
+          // Show a dialog explaining why we need notifications first
+          bool proceed = await showDialog(
+            context: context,
+            builder: (context) => AlertDialog(
+              backgroundColor: const Color.fromARGB(243, 230, 230, 230),
+              title: const Text("Notification Permission Needed"),
+              content: const Text(
+                  "To deliver reminders reliably, please allow notifications."),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context, false),
+                  child: const Text("Not Now"),
+                ),
+                TextButton(
+                  onPressed: () => Navigator.pop(context, true),
+                  child: const Text("Continue"),
+                ),
+              ],
+            ),
+          );
+
+          if (proceed) {
+            await AwesomeNotifications().requestPermissionToSendNotifications();
+          }
+        }
+    }
+       // Rest of your permission requests...
+    } finally {
+      setState(() => _isLoading = false);
     }
   }
 
-Future<void> _requestPermissions() async {
-  // 🔔 Step 1: Ask system for notification permission (only happens on Android 13+)
-  final notifStatus = await Permission.notification.request();
+  
 
-  if (notifStatus.isDenied || notifStatus.isPermanentlyDenied) {
-    // You can show a fallback dialog if user declines
-    print("🔕 Notification permission denied.");
-  }
-
-  // 🔄 Optional fallback (pre-Android 13 or custom behavior)
-  if (!(await AwesomeNotifications().isNotificationAllowed())) {
-    await AwesomeNotifications().requestPermissionToSendNotifications();
-  }
-
-  // 🔋 Ask for battery optimization
-  final batteryStatus = await Permission.ignoreBatteryOptimizations.request();
-
-  // 🔔 Ask for alarm permission (some devices need this for scheduling)
-  final alarmPlugin = FlutterLocalNotificationsPlugin()
-      .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
-  final alarmStatus = await alarmPlugin?.areNotificationsEnabled() ?? false;
-
-  final isNotifAllowed = await AwesomeNotifications().isNotificationAllowed();
-  final ignoresBattery = batteryStatus.isGranted;
-
-  setState(() {
-    _notificationGranted = isNotifAllowed;
-    _alarmGranted = alarmStatus;
-    _ignoresBatteryOptimizations = ignoresBattery;
-  });
-
-  if (_notificationGranted && _alarmGranted) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        elevation: 6,
-        content: const Text("Sufficient Permissions Granted"),
-        behavior: SnackBarBehavior.floating,
-        margin: const EdgeInsets.fromLTRB(16, 0, 16, 100),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(25),
-        ),
-        duration: const Duration(seconds: 3),
-      ),
-    );
-  }
-}
-
-
-  Future<void> _requestNotificationPermission() async {
+  Future<void> requestNotificationPermission() async {
     if (await Permission.notification.isDenied) {
       await Permission.notification.request();
     }
+  }
+
+  Future<void> _requestNotificationPermission() async {
+     final PermissionStatus status = await Permission.notification.request();
+   if (status.isGranted) {
+      // Notification permissions granted
+   } else if (status.isDenied) {
+      // Notification permissions denied
+   } else if (status.isPermanentlyDenied) {
+      // Notification permissions permanently denied, open app settings
+      await openAppSettings();
+   }
   }
 
   Future<void> _checkExactAlarmPermission() async {
@@ -115,38 +133,36 @@ Future<void> _requestPermissions() async {
   }
 
   Future<void> _toggleBatteryOptimization() async {
-    if (_ignoresBatteryOptimizations) {
-      // Can't disable programmatically; only open the settings
-      const intent = AndroidIntent(
-        action: 'android.settings.IGNORE_BATTERY_OPTIMIZATION_SETTINGS',
+    // No need for loading state here since we're just launching settings
+
+    try {
+      if (_ignoresBatteryOptimizations) {
+        await const AndroidIntent(
+          action: 'android.settings.IGNORE_BATTERY_OPTIMIZATION_SETTINGS',
+        ).launch();
+      } else {
+        await const AndroidIntent(
+          action: 'android.settings.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS',
+          data: 'package:com.example.when_did_you_last',
+        ).launch();
+      }
+
+      // Add a small delay before checking the new status
+      await Future.delayed(const Duration(seconds: 1));
+      await _checkPermissions();
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Couldn't open battery settings: $e")),
       );
-      await intent.launch();
-    } else {
-      const intent = AndroidIntent(
-        action: 'android.settings.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS',
-        data: 'package:com.example.when_did_you_last', // your package name
-      );
-      await intent.launch();
     }
-    _checkPermissions();
   }
 
   Future<void> _completeSetup() async {
     final prefs = await SharedPreferences.getInstance();
-    final introShown = prefs.getBool('intro_shown') ?? false;
-
-    if (!introShown) {
-      await prefs.setBool('intro_shown', true);
-      if (mounted) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (_) => const TutorialScreen()),
-        );
-      }
-    } else {
-      Navigator.pop(context); // or navigate to HomePage if needed
-    }
+    await prefs.setBool('intro_shown', true);
+    widget.onComplete(); // Use the callback instead of direct navigation
   }
+
 
   @override
   Widget build(BuildContext context) {

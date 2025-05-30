@@ -17,7 +17,7 @@ class _TestNotificationScreenState extends State<TestNotificationScreen> {
     taskType: "One-Time",
     durationType: "Minutes",
     notificationTime:
-        DateTime.now().add(const Duration(seconds: 20)).millisecondsSinceEpoch,
+        DateTime.now().add(const Duration(seconds: 30)).millisecondsSinceEpoch,
     customInterval: 1,
   );
 
@@ -33,9 +33,11 @@ class _TestNotificationScreenState extends State<TestNotificationScreen> {
     customInterval: 1,
   );
 
-  final ptTask = Task(
+  final wmTask = Task(
     //THIS IS THE REAL 15-MIN ONE
+    //wmTask == WorkManager Task
     //For workmanager purposes
+
     id: 312,
     name: "Real 15-MIN Payload Notification TEST",
     taskType: "Repetitive",
@@ -65,52 +67,74 @@ class _TestNotificationScreenState extends State<TestNotificationScreen> {
     try {
 
           // Delete if already exists
+    debugPrint("TESTNOTIF:: Deleting OneTime Notification ⏩ if exists ⏪ in Database");
     await DatabaseHelper().deleteTask(onceTask.id!);
   
   //Now insert fresh
+      onceTask.notificationId = NotificationHelper.createUniqueNotificationId(onceTask.id!);
+      debugPrint("TESTNOTIF:: Inserting OneTime Notification in Database");
       await DatabaseHelper().insertTask(onceTask);
+      
+
+      debugPrint("TESTNOTIF:: Scheduling OneTime Notification...");
       await NotificationHelper.scheduleNotification(onceTask);
       ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("One-time notification scheduled!")));
+          const SnackBar(content: Text("One-time notification scheduled!")));
+          
     } catch (e) {
       ScaffoldMessenger.of(context)
           .showSnackBar(SnackBar(content: Text("Error: ${e.toString()}")));
+          debugPrint("TESTNOTIF:: ERROR Scheduling OneTime Notification: ${e.toString()}");
     }
   }
 
   Future<void> _sendRepetitiveNotification() async {
     try {
           // Delete if already exists
+    debugPrint("TESTNOTIF:: Deleting Manual Repetitive Notification ⏩ if exists ⏪ in Database...");
     await DatabaseHelper().deleteTask(repeatTask.id!);
 
     //now insert fresh
+      repeatTask.notificationId = NotificationHelper.createUniqueNotificationId(onceTask.id!);
+      debugPrint("TESTNOTIF:: Inserting Manual Repetitive Notification in Database...");
+      debugPrint("TESTNOTIF:: MANUAL REPEAT TASK notification id is: ${repeatTask.notificationId.toString()}");
       await DatabaseHelper().insertTask(repeatTask);
+
+      debugPrint("TESTNOTIF:: Scheduling Manual Repetitive Notification in Database...");
       await NotificationHelper.scheduleNotification(repeatTask);
       ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Repetitive notification scheduled!")));
+          const SnackBar(content: Text("Repetitive notification scheduled!")));
     } catch (e) {
       ScaffoldMessenger.of(context)
           .showSnackBar(SnackBar(content: Text("Error: ${e.toString()}")));
+          debugPrint("TESTNOTIF:: Error Scheduling Manual Repetitive Notification: ${e.toString()}");
     }
   }
 
   
-  Future<void> _sendPTNotification() async {
-    //THIS IS FOR THE REAL PAYLOAD NOTIFICATION OF 15-MIN
+  Future<void> _sendWMNotification() async {
+    //THIS IS FOR THE REAL WORKMANAGER NOTIFICATION OF 15-MIN
 
     try {
           // Delete if already exists
-    await DatabaseHelper().deleteTask(ptTask.id!);
+    debugPrint("TESTNOTIF:: Deleting REAL WORKMANAGER Notification ⏩ if exists ⏪in Database...");
+    await DatabaseHelper().deleteTask(wmTask.id!);
 
     //insert fresh
-      await DatabaseHelper().insertTask(ptTask);
-      await NotificationHelper.scheduleNotification(ptTask);
+      wmTask.notificationId = NotificationHelper.createUniqueNotificationId(onceTask.id!);
+      debugPrint("TESTNOTIF:: Inserting ⬇ REAL WORKMANAGER Notification in Database...");
+      await DatabaseHelper().insertTask(wmTask);
+
+      debugPrint("TESTNOTIF:: Scheduling 🕖 REAL WORKMANAGER Notification in Database...");
+      await NotificationHelper.scheduleNotification(wmTask);
+
       ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Payload test notification scheduled!")));
+          const SnackBar(content: Text("Payload test notification scheduled!")));
     } catch (e) {
       debugPrint("Error scheduling payload notification: $e");
       ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text("Error with payload: ${e.toString()}")));
+          debugPrint("TESTNOTIF:: ERROR SCheduling REAL WORKMANAGER Notification: ${e.toString()}");
     }
   }
 
@@ -119,20 +143,28 @@ class _TestNotificationScreenState extends State<TestNotificationScreen> {
     Future<void> _sendPayloadNotification() async {
   try {
         // Delete if already exists
+    debugPrint("TESTNOTIF:: Deleting FAKE SIMULATED PAYLOAD Notification ⏩ if exists ⏪ in Database...");
     await DatabaseHelper().deleteTask(payloadTask.id!);
+
     //insert fresh
+    payloadTask.notificationId = NotificationHelper.createUniqueNotificationId(onceTask.id!);
+    debugPrint("TESTNOTIF:: Inserting FAKE SIMULATED PAYLOAD Notification in Database...");
     await DatabaseHelper().insertTask(payloadTask);
+
+    debugPrint("TESTNOTIF:: Scheduling 🕗 FAKE SIMULATED PAYLOAD Notification in Database...");
     await NotificationHelper.scheduleNotification(payloadTask);
 
-    //REMOVED
+    //REMOVED BUT WORKS. FOR SIMULATION ONLY.
+    //TEST REAL WORKMANAGER NOTIF IN _sendWMTaskNotification
+
     // Simulate WorkManager by manually triggering repeat every 30s
 
-    /*
+    
     Future.doWhile(() async {
       await Future.delayed(const Duration(seconds: 30));
 
       final task = await DatabaseHelper().getTaskById(payloadTask.id!);
-      if (task == null || !task.notificationsEnabled || !task.autoRepeat) {
+      if (task == null || !task.notificationsEnabled || !task.autoRepeat || !task.isActive) {
         debugPrint("🛑 Auto-repeat simulation stopped.");
         return false; // stop repeating
       }
@@ -148,7 +180,7 @@ class _TestNotificationScreenState extends State<TestNotificationScreen> {
     }
     
     );
-*/
+
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text("Simulated auto-repeat started!")),
     );
@@ -157,6 +189,7 @@ class _TestNotificationScreenState extends State<TestNotificationScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text("Error with payload: ${e.toString()}")),
     );
+    debugPrint("TESTNOTIF:: ERROR Scheduling FAKE PAYLOAD Notification: ${e.toString()}");
   }
 }
 
@@ -192,7 +225,7 @@ class _TestNotificationScreenState extends State<TestNotificationScreen> {
                 SizedBox(height: 20),
             MaterialButton(
                 color: const Color.fromARGB(255, 226, 216, 188),
-                onPressed: _sendPTNotification,
+                onPressed: _sendWMNotification,
                 child: const Text("Send ACTUAL WORKMANAGER payload notification")),
           ],
         ),

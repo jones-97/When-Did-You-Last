@@ -167,6 +167,7 @@ class _NewTaskState extends State<NewTask> {
 
 // In the _saveTask method:
   Future<void> _saveTask() async {
+    debugPrint("NEWTASK:: Saving Task in Database...");
     int? custom_interval;
 
     if (_selectedTaskType != "No Alert/Tracker") {
@@ -229,9 +230,10 @@ class _NewTaskState extends State<NewTask> {
       notificationsEnabled: true,
     );
 
+    debugPrint("NEWTASK:: Inserting Task into Database...");
     final id = await DatabaseHelper().insertTask(task);
 
-    debugPrint("New task's id is $id");
+    debugPrint("NEWTASK: Actual TASK id is::> $id");
 
     // First insert the task to get the auto-generated ID
 
@@ -245,7 +247,7 @@ class _NewTaskState extends State<NewTask> {
      if (taskWithId.taskType == "No Alert/Tracker") {
       ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(elevation: 6,
-            content: const Text("Tracker Task successfully created!"),
+            content: const Center(child: Text("Tracker Task successfully created!")),
             behavior: SnackBarBehavior.floating,
     margin: const EdgeInsets.fromLTRB(16, 0, 16, 15), // adds space from bottom
     shape: RoundedRectangleBorder(
@@ -263,12 +265,18 @@ class _NewTaskState extends State<NewTask> {
     if (!kIsWeb && taskWithId.notificationTime != null) {
 
       try {
+
+        debugPrint("NEWTASK:: GENERATING notif-ID AND UPDATING TASK TO INCLUDE IT...");
+        taskWithId.notificationId = NotificationHelper.createUniqueNotificationId(taskWithId.id!);
+        DatabaseHelper().updateTask(taskWithId);
+
         // 1. First ensure notifications are initialized
+        debugPrint("NEWTASK:: Scheduling Task Notification...");
 
         await NotificationHelper.scheduleNotification(taskWithId);
         ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(elevation: 6,
-            content: const Text("Task successfully created and scheduled!"),
+            content: const Center(child: Text("Task successfully created and scheduled!")),
             behavior: SnackBarBehavior.floating,
     margin: const EdgeInsets.fromLTRB(16, 0, 16, 15), // adds space from bottom
     shape: RoundedRectangleBorder(
@@ -283,10 +291,10 @@ class _NewTaskState extends State<NewTask> {
         
         
       } catch (e) {
-        debugPrint("Error scheduling notification: $e");
+        debugPrint("NEWTASK: Error scheduling notification: $e");
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
             content:
-                Text("Task saved but notification failed: ${e.toString()}")));
+                Text("NEWTASK:: Task saved but notification failed: ${e.toString()}")));
       }
     } 
     

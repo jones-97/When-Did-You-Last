@@ -111,7 +111,11 @@ Future<void> _initializeAppServices() async {
     if (!kIsWeb) {
       tz.initializeTimeZones();
 
+      // Split heavy operations with delays
+      await Future.delayed(const Duration(milliseconds: 100));
+
       await NotificationHelper.init();
+      await Future.delayed(const Duration(milliseconds: 100));
 
       await Workmanager().initialize(callbackDispatcher, isInDebugMode: false);
 
@@ -158,11 +162,27 @@ Future<void> _requestBatteryOptimization() async {
 void callbackDispatcher() {
   Workmanager().executeTask((taskName, inputData) async {
     try {
+      final taskId = inputData?['taskId'] as int?;
+      if (taskId != null) {
+        final task = await DatabaseHelper().getTaskById(taskId);
+        if (task != null) {
+          await NotificationHelper().showAutoRepeatNotification(task);
+        }
+      }
+      return Future.value(true);
+    } catch (e) {
+      debugPrint("Background WorkManager Task FAILURE: $e");
+      return false;
+    }
+  });
+
       /* WidgetsFlutterBinding.ensureInitialized();
       tz.initializeTimeZones();
       */
 
       // Initialize notifications plugin in this isolate
+
+      /*
 
       await NotificationHelper.initializeForBackground();
       final prefs = await SharedPreferences.getInstance();
@@ -189,7 +209,7 @@ void callbackDispatcher() {
           await _rescheduleTask(task);
         }
       }
-
+      */
 
       /*  final task = await DatabaseHelper().getTaskById(taskId);
         final DateTime nextTime;
@@ -219,12 +239,12 @@ void callbackDispatcher() {
         }
       }
       */
-      return true;
-    } catch (e) {
-      debugPrint("Background WorkManager Task FAILURE: $e");
-      return false; //Future.error(e)
-    }
-  });
+  //     return true;
+  //   } catch (e) {
+  //     debugPrint("Background WorkManager Task FAILURE: $e");
+  //     return false; //Future.error(e)
+  //   }
+  // });
 }
 
 Future<void> _rescheduleTask(Task task) async {
@@ -317,52 +337,62 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<ThemeProvider>(builder: (context, themeProvider, child) {
-      if (!kIsWeb) {
-        return AppLifecycleManager(
-            child: MaterialApp(
-                navigatorKey: navigatorKey,
-                debugShowCheckedModeBanner: false,
-                title: 'When Did You Last?',
-                theme: ThemeData.light(),
-                darkTheme: ThemeData.dark(),
-                themeMode:
-                    themeProvider.isDarkMode ? ThemeMode.dark : ThemeMode.light,
-                home: FutureBuilder<bool>(
-                    future: _loadEverything(),
-                    builder: (context, snapshot) {
-                      if (snapshot.connectionState == ConnectionState.done) {
-                        return kIsWeb
-                            ? const MyHomePage()
-                            : showIntro
-                                ? const IntroPermissionsScreen()
-                                : const MyHomePage(); // Set HomeScreen as the main screen
-                      } else {
-                        return const LoadingScreen(); // Show spinner while waiting
-                      }
-                    })));
-      } else {
-        return MaterialApp(
-            navigatorKey: navigatorKey,
-            debugShowCheckedModeBanner: false,
-            title: 'When Did You Last?',
-            theme: ThemeData.light(),
-            darkTheme: ThemeData.dark(),
-            themeMode:
-                themeProvider.isDarkMode ? ThemeMode.dark : ThemeMode.light,
-            home: FutureBuilder<bool>(
-                future: _loadEverything(),
-                builder: (context, snapshot) {
-                  if (snapshot.connectionState == ConnectionState.done) {
-                    return const MyHomePage();
-                  } else {
-                    return const LoadingScreen(); // Show spinner while waiting
-                  }
-                })
+    return FutureBuilder<SharedPreferences>(
+      future: SharedPreferences.getInstance(),
+      builder: (context, snapshot) {
+        if (!snapshot.hasData) {
+          return const MaterialApp(home: LoadingScreen());
+        }
+        
+        final prefs = snapshot.data!;
+        final introCompleted = prefs.getBool('intro_shown') ?? false;
 
-            // const MyHomePage(), // Set HomeScreen as the main screen
+        return Consumer<ThemeProvider>(
+          builder: (context, themeProvider, child) {
+            return MaterialApp(
+              navigatorKey: navigatorKey,
+              debugShowCheckedModeBanner: false,
+              theme: ThemeData.light(),
+              darkTheme: ThemeData.dark(),
+              themeMode: themeProvider.isDarkMode ? ThemeMode.dark : ThemeMode.light,
+              home: _buildHomeScreen(introCompleted, prefs),
             );
-      }
-    });
+          },
+        );
+      },
+    );
   }
+
+  // In main.dart, modify the _buildHomeScreen method:
+Widget _buildHomeScreen(bool introCompleted, SharedPreferences prefs) {
+  return FutureBuilder<bool>(
+    future: _loadEverything(),
+    builder: (context, snapshot) {
+      if (!snapshot.hasData) {
+        return const LoadingScreen();
+      }
+
+      if (kIsWeb) {
+        return const MyHomePage();
+      }
+
+      if (!introCompleted) {
+        return IntroPermissionsScreen(
+          onComplete: () async {
+            await prefs.setBool('intro_shown', true);
+            // Use Navigator.pushReplacement with AppLifecycleManager
+            Navigator.of(context).pushReplacement(
+              MaterialPageRoute(
+                builder: (_) => AppLifecycleManager(child: const MyHomePage()),
+              ),
+            );
+          },
+        );
+      }
+
+      return AppLifecycleManager(child: const MyHomePage());
+    },
+  );
 }
+}
+

@@ -1,5 +1,6 @@
 class Task {
   int? id;
+  int? notificationId;
   String name;
   String? details;
   String taskType; //No Alert/Tracker, One-Time, Repetitive
@@ -13,6 +14,7 @@ class Task {
 
   Task({
     this.id,
+    this.notificationId,
     required this.name,
     this.details,
     required this.taskType,
@@ -28,6 +30,7 @@ class Task {
   Map<String, dynamic> toMap() {
     return {
       'id': id,
+      'notification_id' : notificationId,
       'name': name,
       'details': details,
       'task_type': taskType,
@@ -44,6 +47,7 @@ class Task {
   factory Task.fromMap(Map<String, dynamic> map) {
     return Task(
       id: map['id'],
+      notificationId: map['notification_id'],
       name: map['name'],
       details: map['details'],
       taskType: map['task_type'],
@@ -58,6 +62,7 @@ class Task {
   
   Task copyWith({
     int? id,
+    int? notificationId,
     String? name,
     String? details,
     String? taskType,
@@ -70,6 +75,7 @@ class Task {
   }) {
     return Task(
       id: id ?? this.id,
+      notificationId: this.notificationId,
       name: name ?? this.name,
       details: details ?? this.details,
       taskType: taskType ?? this.taskType,

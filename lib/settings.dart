@@ -31,10 +31,10 @@ class _SettingsState extends State<Settings> {
 
   @override
   void initState() {
-      super.initState();
+    super.initState();
     if (!kIsWeb) {
-    _loadSettings();
-    _loadRingtones();
+      _loadSettings();
+      _loadRingtones();
     }
   }
 
@@ -49,22 +49,22 @@ class _SettingsState extends State<Settings> {
         );
       }
 
-      
       _enableVibration = prefs.getBool('enableVibration') ?? true;
       _autoCompleteTasks = prefs.getBool('autoCompleteTasks') ?? false;
 
       // Load both URI and title
       _selectedRingtoneUri = prefs.getString(_selectedRingtoneUriKey);
-      _selectedRingtoneTitle = prefs.getString(_selectedRingtoneTitleKey) ?? "Default";
+      _selectedRingtoneTitle =
+          prefs.getString(_selectedRingtoneTitleKey) ?? "Default";
     });
   }
 
   Future<void> _loadRingtones() async {
-  List<Ringtone> ringtones = await FlutterSystemRingtones.getRingtoneSounds();
-  setState(() {
-    _ringtones = ringtones;
-  });
-}
+    List<Ringtone> ringtones = await FlutterSystemRingtones.getRingtoneSounds();
+    setState(() {
+      _ringtones = ringtones;
+    });
+  }
 
   Future<void> _saveSetting(String key, dynamic value) async {
     final prefs = await SharedPreferences.getInstance();
@@ -95,12 +95,12 @@ class _SettingsState extends State<Settings> {
   }
 
   Future<void> _toggleVibration(bool value) async {
-  final prefs = await SharedPreferences.getInstance();
-  await prefs.setBool('enableVibration', value);
-  setState(() {
-    _enableVibration = value;
-  });
-}
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('enableVibration', value);
+    setState(() {
+      _enableVibration = value;
+    });
+  }
 
   Future<void> _pickRingtone() async {
     final selectedRingtoneUri = await Navigator.push<String>(
@@ -113,25 +113,24 @@ class _SettingsState extends State<Settings> {
 
     if (selectedRingtoneUri != null && selectedRingtoneUri.isNotEmpty) {
       try {
-      final ringtone =
-          _ringtones.firstWhere((rt) => rt.uri == selectedRingtoneUri);
-      setState(() {
+        final ringtone =
+            _ringtones.firstWhere((rt) => rt.uri == selectedRingtoneUri);
+        setState(() {
           _selectedRingtoneUri = ringtone.uri;
           _selectedRingtoneTitle = ringtone.title;
-      });
-      
-      
-              final prefs = await SharedPreferences.getInstance();
+        });
+
+        final prefs = await SharedPreferences.getInstance();
         await prefs.setString('selectedRingtoneUri', ringtone.uri);
         await prefs.setString('selectedRingtoneTitle', ringtone.title);
-    } catch (e) {
-      debugPrint("Failed to select custom ringtone");
-      setState(() {
-        _selectedRingtoneTitle = "Custom Ringtone";
-      });
-      _saveSetting(_selectedRingtoneUriKey, selectedRingtoneUri);
+      } catch (e) {
+        debugPrint("Failed to select custom ringtone");
+        setState(() {
+          _selectedRingtoneTitle = "Custom Ringtone";
+        });
+        _saveSetting(_selectedRingtoneUriKey, selectedRingtoneUri);
+      }
     }
-  }
   }
 
 /*
@@ -151,32 +150,32 @@ class _SettingsState extends State<Settings> {
   }
 */
 
-void _openAndroidNotificationSettings() async {
-  final deviceInfo = DeviceInfoPlugin();
-  final androidInfo = await deviceInfo.androidInfo;
-  int sdkInt = androidInfo.version.sdkInt;
+  void _openAndroidNotificationSettings() async {
+    final deviceInfo = DeviceInfoPlugin();
+    final androidInfo = await deviceInfo.androidInfo;
+    int sdkInt = androidInfo.version.sdkInt;
 
-  if (sdkInt >= 26) {
-    // Android 8.0+ — can open app notification settings
-    const intent = AndroidIntent(
-      action: 'android.settings.APP_NOTIFICATION_SETTINGS',
-      arguments: <String, dynamic>{
-        'android.provider.extra.APP_PACKAGE': 'com.example.when_did_you_last', // ✅ Your app package
-      },
-      flags: <int>[Flag.FLAG_ACTIVITY_NEW_TASK],
-    );
-    await intent.launch();
-  } else {
-    // Older versions: Just open application details
-    const intent = AndroidIntent(
-      action: 'android.settings.APPLICATION_DETAILS_SETTINGS',
-      data: 'package:com.example.when_did_you_last',
-      flags: <int>[Flag.FLAG_ACTIVITY_NEW_TASK],
-    );
-    await intent.launch();
+    if (sdkInt >= 26) {
+      // Android 8.0+ — can open app notification settings
+      const intent = AndroidIntent(
+        action: 'android.settings.APP_NOTIFICATION_SETTINGS',
+        arguments: <String, dynamic>{
+          'android.provider.extra.APP_PACKAGE':
+              'com.example.when_did_you_last', // ✅ Your app package
+        },
+        flags: <int>[Flag.FLAG_ACTIVITY_NEW_TASK],
+      );
+      await intent.launch();
+    } else {
+      // Older versions: Just open application details
+      const intent = AndroidIntent(
+        action: 'android.settings.APPLICATION_DETAILS_SETTINGS',
+        data: 'package:com.example.when_did_you_last',
+        flags: <int>[Flag.FLAG_ACTIVITY_NEW_TASK],
+      );
+      await intent.launch();
+    }
   }
-}
-
 
   @override
   Widget build(BuildContext context) {
@@ -191,7 +190,7 @@ void _openAndroidNotificationSettings() async {
       ),
       body: ListView(
         children: [
-            /*
+          /*
           ListTile(
             title: const Text("Default Task Time"),
             subtitle: Text(_defaultTaskTime != null
@@ -210,14 +209,12 @@ void _openAndroidNotificationSettings() async {
           ),
             */
 
-           ListTile(
+          ListTile(
             title: const Text("Manage Notifications in System Settings"),
             subtitle: const Text("Customize sound, priority, and behavior"),
             trailing: const Icon(Icons.settings),
             onTap: _openAndroidNotificationSettings,
           ),
-
-
           SwitchListTile(
             title: const Text("Enable Vibration"),
             value: _enableVibration,
@@ -228,8 +225,6 @@ void _openAndroidNotificationSettings() async {
               });
             },
           ),
-          
-          
           SwitchListTile(
             title: const Text("Dark Mode"),
             value: themeProvider.isDarkMode,
@@ -239,17 +234,92 @@ void _openAndroidNotificationSettings() async {
             },
           ),
           ListTile(
-  title: const Text("Revisit Battery Permissions"),
-  subtitle: const Text("Alter battery optimization settings. Results may vary with devices."),
-  trailing: const Icon(Icons.settings),
+            title: const Text("Revisit Battery Permissions"),
+            subtitle: const Text(
+                "Alter battery optimization settings. Results may vary with devices."),
+            trailing: const Icon(Icons.settings),
+            onTap: () async {
+              const intent = AndroidIntent(
+                action: 'android.settings.IGNORE_BATTERY_OPTIMIZATION_SETTINGS',
+                flags: <int>[Flag.FLAG_ACTIVITY_NEW_TASK],
+              );
+              await intent.launch();
+            },
+          ),
+          ListTile(
+  title: const Text("Clear All Reminders"),
+  subtitle: const Text("Deletes all saved reminders. This action cannot be undone."),
+  trailing: const Icon(Icons.delete_forever, color: Colors.red),
   onTap: () async {
-    const intent =  AndroidIntent(
-      action: 'android.settings.IGNORE_BATTERY_OPTIMIZATION_SETTINGS',
-      flags: <int>[Flag.FLAG_ACTIVITY_NEW_TASK],
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text("Confirm Deletion"),
+        content: const Text("Are you sure you want to delete all reminders?"),
+        actions: [
+          TextButton(
+            child: const Text("Cancel"),
+            onPressed: () => Navigator.pop(context, false),
+          ),
+          TextButton(
+            child: const Text("Delete"),
+            onPressed: () => Navigator.pop(context, true),
+          ),
+        ],
+      ),
     );
-    await intent.launch();
+
+    if (confirm == true) {
+      // TODO: Implement actual data clearing logic, e.g., calling your database/service method
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("All reminders cleared.")),
+      );
+    }
   },
 ),
+ListTile(
+  title: const Text("Export Reminders"),
+  subtitle: const Text("Backup your reminders to a file"),
+  trailing: const Icon(Icons.file_upload),
+  onTap: () {
+    // TODO: Implement export logic
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text("Export not yet implemented.")),
+    );
+  },
+),
+ListTile(
+  title: const Text("Import Reminders"),
+  subtitle: const Text("Restore reminders from a backup file"),
+  trailing: const Icon(Icons.file_download),
+  onTap: () {
+    // TODO: Implement import logic
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text("Import not yet implemented.")),
+    );
+  },
+),
+ListTile(
+  title: const Text("About"),
+  subtitle: const Text("App version, developer info, and license"),
+  trailing: const Icon(Icons.info_outline),
+  onTap: () {
+    showAboutDialog(
+      context: context,
+      applicationName: "When Did You Last",
+      applicationVersion: "1.0.0",
+      applicationIcon: const Icon(Icons.access_time),
+      applicationLegalese: "© 2025 Your Name or Company",
+      children: [
+        const Padding(
+          padding: EdgeInsets.only(top: 15),
+          child: Text("This app helps you track when you last did something."),
+        ),
+      ],
+    );
+  },
+),
+
 /*
 ListTile(
   title: const Text("Background Activity Settings"),

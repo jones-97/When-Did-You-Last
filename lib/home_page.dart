@@ -36,7 +36,8 @@ class _MyHomePageState extends State<MyHomePage> {
 
   Future<void> _loadCompletedDates() async {
     final db = await dbHelper.database;
-    final List<Map<String, dynamic>> results = await db.query('completed_tasks');
+    final List<Map<String, dynamic>> results =
+        await db.query('completed_tasks');
 
     setState(() {
       _completedTaskDates = results
@@ -58,148 +59,154 @@ class _MyHomePageState extends State<MyHomePage> {
             onSelected: (value) {
               if (value == 'Task View') {
                 Navigator.pushReplacement(
-  context,
-  MaterialPageRoute(builder: (context) => TasksList()),
-);
-
-                
-              }
-              else if (value == 'Settings') {
-                
-                  Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => TasksList()),
+                );
+              } else if (value == 'Settings') {
+                Navigator.push(
                   context,
                   MaterialPageRoute(builder: (context) => const Settings()),
                 );
-              }
-
-              else if(value == 'Test Notification') {
+              } else if (value == 'Test Notification') {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => TestNotificationScreen()),
+                  MaterialPageRoute(
+                      builder: (context) => TestNotificationScreen()),
                 );
+              } else if (value == 'Permissions') {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => IntroPermissionsScreen(
+                      onComplete:  () {
+                        Navigator.pop(context);
+                      },
+                  ),
+                ));
+              } else if (value == 'Tutorial') {
+                Navigator.push(context,
+                    MaterialPageRoute(builder: (_) => const TutorialScreen()));
               }
-
-              else if (value == 'Permissions') {
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (_) => const IntroPermissionsScreen(),
-        ),
-      );
-    }
-    else if (value == 'Tutorial') {
-      Navigator.push(
-          context, MaterialPageRoute(builder: (_) => const TutorialScreen()));
-    }
-
-              
             },
             itemBuilder: (context) => [
               const PopupMenuItem(value: 'Task View', child: Text('Task View')),
-              const PopupMenuItem(value: 'Tutorial', child: Text('How to Use'), ),
-              
-                  const PopupMenuItem(value: 'Test Notification', child: Text('Test Notification')),
-                  const PopupMenuItem(value: 'Permissions', child: Text('Permissions Setup'),),
-                  const PopupMenuItem(value: 'Settings', child: Text('Settings')),
-                   
-              
-                  // ✅ New item
+              const PopupMenuItem(
+                value: 'Tutorial',
+                child: Text('How to Use'),
+              ),
+
+              const PopupMenuItem(
+                  value: 'Test Notification', child: Text('Test Notification')),
+              const PopupMenuItem(
+                value: 'Permissions',
+                child: Text('Permissions Setup'),
+              ),
+              const PopupMenuItem(value: 'Settings', child: Text('Settings')),
+
+              // ✅ New item
             ],
           ),
         ],
       ),
       body: SingleChildScrollView(
-      child: Padding(
-        
-        padding: const EdgeInsets.all(16.0),
-
-        
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
           child: TableCalendar(
-            
-  firstDay: DateTime.utc(2020, 1, 1), // Adjust the range as needed
-  lastDay: DateTime.now(),
-  focusedDay: _focusedDay,
-  calendarFormat: CalendarFormat.month,
-   availableCalendarFormats: const {CalendarFormat.month: 'Month'}, // ✅ Only allow month view
-  headerStyle: const HeaderStyle(
-    formatButtonVisible: false, // ✅ Hides the format button
-  ),
-  selectedDayPredicate: (day) => _completedTaskDates.contains(_stripTime(day)),
-  onDaySelected: (selectedDay, focusedDay) async {
-    if (selectedDay.isAfter(DateTime.now())) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("You cannot select future dates.")),
-      );
-      return;
-    }
+            firstDay: DateTime.utc(2020, 1, 1), // Adjust the range as needed
+            lastDay: DateTime.now(),
+            focusedDay: _focusedDay,
+            calendarFormat: CalendarFormat.month,
+            availableCalendarFormats: const {
+              CalendarFormat.month: 'Month'
+            }, // ✅ Only allow month view
+            headerStyle: const HeaderStyle(
+              formatButtonVisible: false,
+              titleCentered: true, // ✅ Hides the format button
+            ),
+            selectedDayPredicate: (day) =>
+                _completedTaskDates.contains(_stripTime(day)),
+            onDaySelected: (selectedDay, focusedDay) async {
+              if (selectedDay.isAfter(DateTime.now())) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                      content: Text("You cannot select future dates.")),
+                );
+                return;
+              }
 
-    bool? shouldRefresh = await Navigator.push(
-      context,
-      MaterialPageRoute(builder: (context) => DateView(selectedDate: selectedDay)),
-    );
+              bool? shouldRefresh = await Navigator.push(
+                context,
+                MaterialPageRoute(
+                    builder: (context) => DateView(selectedDate: selectedDay)),
+              );
 
-    if (shouldRefresh == true) {
-      _loadCompletedDates(); // Refresh the calendar when returning
-    }
-  },
-  
-  calendarStyle:const CalendarStyle(
-  selectedDecoration: BoxDecoration(
-    color: Color.fromARGB(255, 115, 239, 182), // Force green for selected dates
-    shape: BoxShape.circle,
-  ),
-  todayDecoration: BoxDecoration(
-    color: Colors.lightBlue, // Keep today's date blue
-    shape: BoxShape.circle,
-  ),
-  defaultDecoration: BoxDecoration(
-    shape: BoxShape.circle,
-  ),
-  weekendDecoration: BoxDecoration(
-    shape: BoxShape.circle,
-  ),
-),
+              if (shouldRefresh == true) {
+                _loadCompletedDates(); // Refresh the calendar when returning
+              }
+            },
 
+            calendarStyle: const CalendarStyle(
+              selectedDecoration: BoxDecoration(
+                color: Color.fromARGB(
+                    255, 115, 239, 182), // Force green for selected dates
+                shape: BoxShape.circle,
+              ),
+              todayDecoration: BoxDecoration(
+                color: Colors.lightBlue, // Keep today's date blue
+                shape: BoxShape.circle,
+              ),
+              defaultDecoration: BoxDecoration(
+                shape: BoxShape.circle,
+              ),
+              weekendDecoration: BoxDecoration(
+                shape: BoxShape.circle,
+              ),
+            ),
 
+            calendarBuilders: CalendarBuilders(
+              defaultBuilder: (context, day, focusedDay) {
+                bool isDarkMode =
+                    Theme.of(context).brightness == Brightness.dark;
+                bool isCompleted =
+                    _completedTaskDates.contains(_stripTime(day));
+                bool isFutureDate = day.isAfter(DateTime.now());
 
-  
-  calendarBuilders: CalendarBuilders(
-    defaultBuilder: (context, day, focusedDay) {
-      bool isDarkMode = Theme.of(context).brightness == Brightness.dark;
-      bool isCompleted = _completedTaskDates.contains(_stripTime(day));
-      bool isFutureDate = day.isAfter(DateTime.now());
-    
-      return Container(
-        margin: const EdgeInsets.all(4),
-        decoration: BoxDecoration(
-          color: isCompleted ? const Color(0xffceebe4) : Colors.transparent,
-          shape: BoxShape.circle,
-        ),
-        child: Center(
-          child: Text(
-            '${day.day}',
-            style: TextStyle(
-              color: isFutureDate 
-                ? (isDarkMode ? Colors.black : Colors.grey)  // Future dates
-                : (isDarkMode ? Colors.white : Colors.black), // Accessible dates
-            
-              fontWeight: FontWeight.bold,
+                return Container(
+                  margin: const EdgeInsets.all(4),
+                  decoration: BoxDecoration(
+                    color: isCompleted
+                        ? const Color(0xffceebe4)
+                        : Colors.transparent,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Center(
+                    child: Text(
+                      '${day.day}',
+                      style: TextStyle(
+                        color: isFutureDate
+                            ? (isDarkMode
+                                ? Colors.black
+                                : Colors.grey) // Future dates
+                            : (isDarkMode
+                                ? Colors.white
+                                : Colors.black), // Accessible dates
+
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                );
+              },
             ),
           ),
         ),
-      );
-    },
-  ),
-),
-      ),
-      
       ),
       floatingActionButton: FloatingActionButton(
         tooltip: "Add new task",
         backgroundColor: const Color.fromARGB(255, 83, 214, 184),
         onPressed: () {
           Navigator.push(
-                  context, MaterialPageRoute(builder: (context) => NewTask()));
+              context, MaterialPageRoute(builder: (context) => NewTask()));
         },
         child: const Icon(Icons.add, color: Colors.white),
       ),

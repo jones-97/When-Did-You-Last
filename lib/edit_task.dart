@@ -52,7 +52,8 @@ class _EditTaskState extends State<EditTask> {
     _notificationsEnabled = widget.task.notificationsEnabled;
     _detailsController.text = widget.task.details ?? '';
     _autoRepeat = widget.task.autoRepeat;
-    selectedDateString = DateFormat('MMM dd, yyyy - hh:mm a').format(DateTime.fromMillisecondsSinceEpoch(widget.task.notificationTime!));
+
+    widget.task.taskType == "No Alert/Tracker" ? selectedDateString == "" : selectedDateString = DateFormat('MMM dd, yyyy - hh:mm a').format(DateTime.fromMillisecondsSinceEpoch(widget.task.notificationTime!));
 
 
     _initializeNotificationSettings();
@@ -230,7 +231,7 @@ class _EditTaskState extends State<EditTask> {
       }
     }
   }
-
+/*
 Future<void> _updateTask() async {
   // if (_selectedTaskType != "No Alert/Tracker") {
   //   bool hasNoDays = _daysController.text.trim().isEmpty;
@@ -348,7 +349,91 @@ Future<void> _updateTask() async {
     );
   }
 }
+*/
 
+  Future<void> _updateTask() async {
+  try {
+    // Determine if notification settings were changed
+    bool notificationSettingsChanged =
+        widget.task.taskType != _selectedTaskType ||
+        widget.task.durationType != _selectedDurationType ||
+        (_selectedDurationType == 'Hours' && 
+            widget.task.customInterval != int.tryParse(_hoursController.text)) ||
+        (_selectedDurationType == 'Days' && 
+            widget.task.customInterval != int.tryParse(_daysController.text)) ||
+        (_selectedDurationType == 'Specific' && 
+            widget.task.notificationTime != _selectedDate?.millisecondsSinceEpoch);
+
+    // Calculate new notification time ONLY if notification settings changed
+    if (notificationSettingsChanged) {
+      calculateDateTime();
+    } else {
+      // Keep the original notification time if settings didn't change
+      _notificationTime = widget.task.notificationTime;
+    }
+
+    // Determine custom_interval value
+    int? customInterval;
+    if (_selectedDurationType == 'Hours' && _hoursController.text.isNotEmpty) {
+      customInterval = int.tryParse(_hoursController.text);
+    } else if (_selectedDurationType == 'Days' && _daysController.text.isNotEmpty) {
+      customInterval = int.tryParse(_daysController.text);
+    }
+
+    final updatedTask = Task(
+      id: widget.task.id,
+      name: _nameController.text,
+      details: _showDetails ? _detailsController.text : null,
+      taskType: _selectedTaskType!,
+      durationType: _selectedDurationType ?? "None",
+      autoRepeat: _autoRepeat,
+      notificationTime: _notificationTime, // Will be original if settings didn't change
+      notificationsEnabled: _notificationsEnabled,
+      customInterval: customInterval ?? widget.task.customInterval,
+    );
+
+    // Only update completion dates if task type changed
+    if (updatedTask.taskType != widget.task.taskType && 
+        updatedTask.taskType != "No Alert/Tracker") {
+      debugPrint("Task type changed, updating completion table...");
+      await DatabaseHelper().removeFromCompletionDates(updatedTask.id!);
+    }
+
+    final result = await DatabaseHelper().updateTask(updatedTask);
+
+    // Handle notifications only if relevant settings changed
+    if (!kIsWeb && notificationSettingsChanged) {
+      await NotificationHelper.updateNotificationState(updatedTask);
+    }
+
+    if (result > 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          elevation: 6,
+          content: Center(child: Text(notificationSettingsChanged 
+              ? "Task and notifications updated!" 
+              : "Task details updated!")),
+          behavior: SnackBarBehavior.floating,
+          margin: const EdgeInsets.fromLTRB(16, 0, 16, 15),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(30),
+          ),
+          duration: const Duration(seconds: 3),
+        ),
+      );
+      Navigator.pop(context, true);
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Failed to update task")),
+      );
+    }
+  } catch (e) {
+    debugPrint("Error updating task: $e");
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text("An error occurred while updating")),
+    );
+  }
+}
 
   void _showConfirmDialog() {
     showDialog(context: context, builder: (BuildContext context) {
