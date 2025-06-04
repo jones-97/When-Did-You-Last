@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_system_ringtones/flutter_system_ringtones.dart';
+// import 'package:flutter_system_ringtones/flutter_system_ringtones.dart';
 
 class RingtonePickerScreen extends StatefulWidget {
   final String? selectedRingtoneUri;
@@ -29,7 +29,7 @@ class Tone {
   
 class _RingtonePickerScreenState extends State<RingtonePickerScreen> {
  // List<String> _ringtonesUri = [];
-  List<Ringtone> _ringtones = [];
+List<String> _ringtones = [];
  //  List<String> _ringtoneTitles = [];
 
  // List<Tone> _tones = [];
@@ -46,14 +46,11 @@ class _RingtonePickerScreenState extends State<RingtonePickerScreen> {
   }
 
   Future<void> _loadRingtones() async {
-    List<Ringtone> ringtones = await FlutterSystemRingtones.getRingtoneSounds();
+    // List<Ringtone> ringtones = await FlutterSystemRingtones.getRingtoneSounds();
+    List<String> ringtones = ["A", "Ringetone"];
     setState(() {
-      _ringtones = ringtones;
-      //_ringtoneTitles = ringtones.map((rt) => rt.title).toList();
-      
-
-     
-
+      List <String>_ringtones = ringtones;
+     // _ringtoneTitles = ringtones.map((rt) => rt.title).toList();
       
     });
   }
@@ -70,15 +67,15 @@ class _RingtonePickerScreenState extends State<RingtonePickerScreen> {
               itemCount: _ringtones.length,
               itemBuilder: (context, index) {
                 final ringtone = _ringtones[index];
-                return ListTile(
-                  title: Text(ringtone.title), // Display the ringtone URI or name
-                  trailing: _selectedRingtoneUri == ringtone.uri
-                      ? Icon(Icons.check, color: Theme.of(context).primaryColor)
-                      : null,
-                  onTap: () {
-                    Navigator.pop(context, ringtone.uri); // Return the selected ringtone URI
-                  },
-                );
+                // return ListTile(
+                //   title: Text(ringtone.title), // Display the ringtone URI or name
+                //   trailing: _selectedRingtoneUri == ringtone.uri
+                //       ? Icon(Icons.check, color: Theme.of(context).primaryColor)
+                //       : null,
+                //   onTap: () {
+                //     Navigator.pop(context, ringtone.uri); // Return the selected ringtone URI
+                //   },
+                // );
               },
             ),
     );

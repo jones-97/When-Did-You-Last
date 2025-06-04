@@ -9,12 +9,12 @@ import 'package:shared_preferences/shared_preferences.dart';
 // import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:device_info_plus/device_info_plus.dart';
-import 'package:android_intent_plus/android_intent.dart';
-import 'package:android_intent_plus/flag.dart';
+// import 'package:android_intent_plus/android_intent.dart';
+// import 'package:android_intent_plus/flag.dart';
 import 'package:when_did_you_last/Util/loading_screen.dart';
 import 'package:when_did_you_last/app_lifecycle_manager.dart';
 import 'package:when_did_you_last/intro_permissions.dart';
-import 'package:when_did_you_last/tutorial_screen.dart';
+// import 'package:when_did_you_last/tutorial_screen.dart';
 import 'package:workmanager/workmanager.dart';
 // import 'dart:io';
 // import 'package:when_did_you_last/settings.dart';
@@ -143,6 +143,9 @@ Future<void> _initializeAppServices() async {
   }
 }
 
+//AGAIN, NOT SURE IF WE USE THIS METHOD
+
+/*
 Future<void> _requestBatteryOptimization() async {
   DeviceInfoPlugin deviceInfo = DeviceInfoPlugin();
   AndroidDeviceInfo androidInfo = await deviceInfo.androidInfo;
@@ -157,6 +160,7 @@ Future<void> _requestBatteryOptimization() async {
     await intent.launch();
   }
 }
+*/
 
 @pragma('vm:entry-point')
 void callbackDispatcher() {
@@ -267,6 +271,8 @@ Future<void> _rescheduleTask(Task task) async {
   );
 }
 
+//NOT SURE IF WE USE THIS METHOD
+/*
 Future<void> _checkExactAlarmPermission() async {
   if (await AwesomeNotifications().isNotificationAllowed() == false) {
     await AwesomeNotifications().requestPermissionToSendNotifications();
@@ -284,8 +290,10 @@ Future<void> _checkExactAlarmPermission() async {
     }
   }
 }
+*/
 
 //NOT SURE IF WE USE THIS METHOD
+/*
 Future<void> _requestExactAlarmPermission() async {
   // prefs = await SharedPreferences.getInstance();
   bool isAlarmPermissionGranted =
@@ -325,6 +333,7 @@ Future<void> _requestExactAlarmPermission() async {
     }
   }
 }
+*/
 
 Future<int> getAndroidSdkVersion() async {
   final androidInfo = await DeviceInfoPlugin().androidInfo;

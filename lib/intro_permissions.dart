@@ -3,9 +3,12 @@ import 'package:device_info_plus/device_info_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:android_intent_plus/android_intent.dart';
+import 'tutorial_screen.dart';
+// import 'package:android_intent_plus/android_intent.dart';
+import 'package:app_settings/app_settings.dart';
 import 'dart:io' show Platform;
 import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/services.dart';
 
 class IntroPermissionsScreen extends StatefulWidget {
   final VoidCallback onComplete;
@@ -132,34 +135,36 @@ class _IntroPermissionsScreenState extends State<IntroPermissionsScreen> {
     }
   }
 
-  Future<void> _toggleBatteryOptimization() async {
-    // No need for loading state here since we're just launching settings
+  Future<bool> _isBatteryOptimizationDisabled() async {
+  if (!Platform.isAndroid) return true;
+  
+  final status = await Permission.ignoreBatteryOptimizations.status;
+  return status.isGranted;
+}
 
-    try {
-      if (_ignoresBatteryOptimizations) {
-        await const AndroidIntent(
-          action: 'android.settings.IGNORE_BATTERY_OPTIMIZATION_SETTINGS',
-        ).launch();
-      } else {
-        await const AndroidIntent(
-          action: 'android.settings.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS',
-          data: 'package:com.example.when_did_you_last',
-        ).launch();
-      }
-
-      // Add a small delay before checking the new status
-      await Future.delayed(const Duration(seconds: 1));
-      await _checkPermissions();
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Couldn't open battery settings: $e")),
-      );
-    }
+Future<void> _toggleBatteryOptimization() async {
+  try {
+    await AppSettings.openAppSettings(type: AppSettingsType.batteryOptimization);
+    await Future.delayed(const Duration(seconds: 1));
+    await _checkPermissions(); // Refresh status
+  } catch (e) {
+    await AppSettings.openAppSettings();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text("Couldn't open settings safely: ${e.toString()}")),
+    );
   }
+}
 
   Future<void> _completeSetup() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('intro_shown', true);
+
+    
+  // Navigate to TutorialScreen after completing setup
+  Navigator.pushReplacement(
+    context,
+    MaterialPageRoute(builder: (_) => const TutorialScreen()),
+  );
     widget.onComplete(); // Use the callback instead of direct navigation
   }
 

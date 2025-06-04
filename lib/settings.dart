@@ -1,9 +1,10 @@
+import 'package:app_settings/app_settings.dart';
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:flutter_system_ringtones/flutter_system_ringtones.dart';
-import 'package:android_intent_plus/android_intent.dart';
-import 'package:android_intent_plus/flag.dart';
+//import 'package:flutter_system_ringtones/flutter_system_ringtones.dart';
+// import 'package:android_intent_plus/android_intent.dart';
+// import 'package:android_intent_plus/flag.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 
 import 'package:provider/provider.dart';
@@ -23,7 +24,7 @@ class Settings extends StatefulWidget {
 
 class _SettingsState extends State<Settings> {
   TimeOfDay? _defaultTaskTime;
-  List<Ringtone> _ringtones = [];
+//  List<Ringtone> _ringtones = [];
   String? _selectedRingtoneUri;
   String? _selectedRingtoneTitle;
   bool _enableVibration = true;
@@ -60,10 +61,11 @@ class _SettingsState extends State<Settings> {
   }
 
   Future<void> _loadRingtones() async {
-    List<Ringtone> ringtones = await FlutterSystemRingtones.getRingtoneSounds();
+    /* List<Ringtone> ringtones = await FlutterSystemRingtones.getRingtoneSounds();
     setState(() {
       _ringtones = ringtones;
     });
+    */
   }
 
   Future<void> _saveSetting(String key, dynamic value) async {
@@ -103,12 +105,14 @@ class _SettingsState extends State<Settings> {
   }
 
   Future<void> _pickRingtone() async {
+    /*
     final selectedRingtoneUri = await Navigator.push<String>(
       context,
       MaterialPageRoute(
         builder: (context) =>
             RingtonePickerScreen(selectedRingtoneUri: _selectedRingtoneUri),
       ),
+      
     );
 
     if (selectedRingtoneUri != null && selectedRingtoneUri.isNotEmpty) {
@@ -131,6 +135,7 @@ class _SettingsState extends State<Settings> {
         _saveSetting(_selectedRingtoneUriKey, selectedRingtoneUri);
       }
     }
+    */
   }
 
 /*
@@ -154,26 +159,33 @@ class _SettingsState extends State<Settings> {
     final deviceInfo = DeviceInfoPlugin();
     final androidInfo = await deviceInfo.androidInfo;
     int sdkInt = androidInfo.version.sdkInt;
-
+    try {
     if (sdkInt >= 26) {
       // Android 8.0+ — can open app notification settings
-      const intent = AndroidIntent(
-        action: 'android.settings.APP_NOTIFICATION_SETTINGS',
-        arguments: <String, dynamic>{
-          'android.provider.extra.APP_PACKAGE':
-              'com.example.when_did_you_last', // ✅ Your app package
-        },
-        flags: <int>[Flag.FLAG_ACTIVITY_NEW_TASK],
-      );
-      await intent.launch();
+      // const intent = AndroidIntent(
+      //   action: 'android.settings.APP_NOTIFICATION_SETTINGS',
+      //   arguments: <String, dynamic>{
+      //     'android.provider.extra.APP_PACKAGE':
+      //         'com.example.when_did_you_last', // ✅ Your app package
+      //   },
+      //   flags: <int>[Flag.FLAG_ACTIVITY_NEW_TASK],
+      // );
+      // await intent.launch();
+      await AppSettings.openAppSettings(type: AppSettingsType.notification);
     } else {
       // Older versions: Just open application details
-      const intent = AndroidIntent(
-        action: 'android.settings.APPLICATION_DETAILS_SETTINGS',
-        data: 'package:com.example.when_did_you_last',
-        flags: <int>[Flag.FLAG_ACTIVITY_NEW_TASK],
-      );
-      await intent.launch();
+      // const intent = AndroidIntent(
+      //   action: 'android.settings.APPLICATION_DETAILS_SETTINGS',
+      //   data: 'package:com.example.when_did_you_last',
+      //   flags: <int>[Flag.FLAG_ACTIVITY_NEW_TASK],
+      // );
+      // await intent.launch();
+      await AppSettings.openAppSettings(type: AppSettingsType.notification);
+    }
+    } catch (e) {
+      await AppSettings.openAppSettings();
+      debugPrint("Couldn't open notification settings safely: ${e.toString()}");
+
     }
   }
 
@@ -239,11 +251,17 @@ class _SettingsState extends State<Settings> {
                 "Alter battery optimization settings. Results may vary with devices."),
             trailing: const Icon(Icons.settings),
             onTap: () async {
-              const intent = AndroidIntent(
-                action: 'android.settings.IGNORE_BATTERY_OPTIMIZATION_SETTINGS',
-                flags: <int>[Flag.FLAG_ACTIVITY_NEW_TASK],
-              );
-              await intent.launch();
+              // const intent = AndroidIntent(
+              //   action: 'android.settings.IGNORE_BATTERY_OPTIMIZATION_SETTINGS',
+              //   flags: <int>[Flag.FLAG_ACTIVITY_NEW_TASK],
+              // );
+              // await intent.launch();
+              try {
+              await AppSettings.openAppSettings(type: AppSettingsType.batteryOptimization);
+              } catch (e) {
+                await AppSettings.openAppSettings();
+                debugPrint("Couldn't open Battery Optimization settings safely: ${e.toString()}");
+              }
             },
           ),
           ListTile(
