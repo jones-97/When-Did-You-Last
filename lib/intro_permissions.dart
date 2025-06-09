@@ -3,6 +3,7 @@ import 'package:device_info_plus/device_info_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:when_did_you_last/home_page.dart';
 import 'tutorial_screen.dart';
 // import 'package:android_intent_plus/android_intent.dart';
 import 'package:app_settings/app_settings.dart';
@@ -62,8 +63,7 @@ class _IntroPermissionsScreenState extends State<IntroPermissionsScreen> {
         _isLoading = false;
       });
     }
-    }
-  
+  }
 
   Future<void> _requestPermissions() async {
     //older
@@ -102,14 +102,12 @@ class _IntroPermissionsScreenState extends State<IntroPermissionsScreen> {
             await AwesomeNotifications().requestPermissionToSendNotifications();
           }
         }
-    }
-       // Rest of your permission requests...
+      }
+      // Rest of your permission requests...
     } finally {
       setState(() => _isLoading = false);
     }
   }
-
-  
 
   Future<void> requestNotificationPermission() async {
     if (await Permission.notification.isDenied) {
@@ -118,15 +116,15 @@ class _IntroPermissionsScreenState extends State<IntroPermissionsScreen> {
   }
 
   Future<void> _requestNotificationPermission() async {
-     final PermissionStatus status = await Permission.notification.request();
-   if (status.isGranted) {
+    final PermissionStatus status = await Permission.notification.request();
+    if (status.isGranted) {
       // Notification permissions granted
-   } else if (status.isDenied) {
+    } else if (status.isDenied) {
       // Notification permissions denied
-   } else if (status.isPermanentlyDenied) {
+    } else if (status.isPermanentlyDenied) {
       // Notification permissions permanently denied, open app settings
       await openAppSettings();
-   }
+    }
   }
 
   Future<void> _checkExactAlarmPermission() async {
@@ -136,43 +134,55 @@ class _IntroPermissionsScreenState extends State<IntroPermissionsScreen> {
   }
 
   Future<bool> _isBatteryOptimizationDisabled() async {
-  if (!Platform.isAndroid) return true;
-  
-  final status = await Permission.ignoreBatteryOptimizations.status;
-  return status.isGranted;
-}
+    if (!Platform.isAndroid) return true;
 
-Future<void> _toggleBatteryOptimization() async {
-  try {
-    await AppSettings.openAppSettings(type: AppSettingsType.batteryOptimization);
-    await Future.delayed(const Duration(seconds: 1));
-    await _checkPermissions(); // Refresh status
-  } catch (e) {
-    await AppSettings.openAppSettings();
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text("Couldn't open settings safely: ${e.toString()}")),
-    );
+    final status = await Permission.ignoreBatteryOptimizations.status;
+    return status.isGranted;
   }
-}
+
+  Future<void> _toggleBatteryOptimization() async {
+    try {
+      await AppSettings.openAppSettings(
+          type: AppSettingsType.batteryOptimization);
+      await Future.delayed(const Duration(seconds: 1));
+      await _checkPermissions(); // Refresh status
+    } catch (e) {
+      await AppSettings.openAppSettings();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+            content: Text("Couldn't open settings safely: ${e.toString()}")),
+      );
+    }
+  }
 
   Future<void> _completeSetup() async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('intro_shown', true);
 
-    
-  // Navigate to TutorialScreen after completing setup
-  Navigator.pushReplacement(
-    context,
-    MaterialPageRoute(builder: (_) => const TutorialScreen()),
-  );
+    // await prefs.setBool('intro_shown', true);
+
+    if (prefs.getBool('intro_shown') == true) {
+
+        Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const MyHomePage()));
+    } else {
+      // Navigate to TutorialScreen after completing setup
+        Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const TutorialScreen()),
+      );
+    }
+
     widget.onComplete(); // Use the callback instead of direct navigation
   }
-
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("Setup Permissions", style: TextStyle(color: Colors.white)), backgroundColor: const Color(0xff939dab)),
+      appBar: AppBar(
+          title: const Text("Setup Permissions",
+              style: TextStyle(color: Colors.white)),
+          backgroundColor: const Color(0xff939dab)),
       body: Padding(
         padding: const EdgeInsets.all(20),
         child: Column(
@@ -180,7 +190,8 @@ Future<void> _toggleBatteryOptimization() async {
             const Text("We need a few permissions to send reminders reliably:"),
             const SizedBox(height: 20),
             ListTile(
-              leading: Icon(_notificationGranted ? Icons.check : Icons.notifications),
+              leading: Icon(
+                  _notificationGranted ? Icons.check : Icons.notifications),
               title: const Text("Notification Permission"),
               subtitle: const Text("To show reminders"),
             ),
@@ -194,7 +205,8 @@ Future<void> _toggleBatteryOptimization() async {
             const SizedBox(height: 20),
             MaterialButton(
               elevation: 2,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12)),
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
               color: const Color(0xffefd0d7),
               onPressed: _requestPermissions,
@@ -203,7 +215,8 @@ Future<void> _toggleBatteryOptimization() async {
             const SizedBox(height: 12),
             MaterialButton(
               elevation: 2,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12)),
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
               color: const Color(0xffefd0d7),
               onPressed: _toggleBatteryOptimization,
@@ -214,7 +227,8 @@ Future<void> _toggleBatteryOptimization() async {
             const Spacer(),
             MaterialButton(
               elevation: 2,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12)),
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
               color: const Color(0xfffcaeae2),
               onPressed: _completeSetup,

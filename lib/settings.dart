@@ -30,6 +30,8 @@ class _SettingsState extends State<Settings> {
   bool _enableVibration = true;
   bool _autoCompleteTasks = false;
 
+ 
+
   @override
   void initState() {
     super.initState();

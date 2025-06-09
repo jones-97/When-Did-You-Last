@@ -1,9 +1,25 @@
 // tutorial_screen.dart
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:when_did_you_last/home_page.dart';
 
-class TutorialScreen extends StatelessWidget {
+class TutorialScreen extends StatefulWidget {
+
   const TutorialScreen({super.key});
+
+   @override
+  State<TutorialScreen> createState() => _TutorialScreenState();
+}
+
+class _TutorialScreenState extends State<TutorialScreen> {
+
+  Future<void> _gotIt() async {
+    final prefs = await SharedPreferences.getInstance();
+
+    await prefs.setBool('intro_shown', true);
+
+    Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const MyHomePage()));
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -31,9 +47,9 @@ class TutorialScreen extends StatelessWidget {
               children: [
                 Text("Home Screen", style: headlineStyle),
                 const SizedBox(height: 8),
-                Image.asset('images/calendar_view.jpg', width: 200, height: 200),
+                Image.asset('images/calendar_view.jpg',
+                    width: 200, height: 200),
                 const SizedBox(height: 8),
-
                 Text(
                   "When you complete a task on a specific date, that date is highlighted in green on the calendar. "
                   "Tapping the date shows the Date View, where you can see all completed tasks from that day.\n",
@@ -41,7 +57,6 @@ class TutorialScreen extends StatelessWidget {
                 ),
                 Image.asset('images/date_view.jpg', width: 200, height: 200),
                 const SizedBox(height: 24),
-
                 Text("Menu Access", style: headlineStyle),
                 const SizedBox(height: 8),
                 Text(
@@ -49,7 +64,6 @@ class TutorialScreen extends StatelessWidget {
                   style: bodyStyle,
                 ),
                 const SizedBox(height: 24),
-
                 Text("Adding New Tasks", style: headlineStyle),
                 const SizedBox(height: 8),
                 Text(
@@ -57,9 +71,9 @@ class TutorialScreen extends StatelessWidget {
                   "This takes you to the New Task screen.\n",
                   style: bodyStyle,
                 ),
-                Image.asset('images/new_task_view_unpopulated.jpg', width: 200, height: 200),
+                Image.asset('images/new_task_view_unpopulated.jpg',
+                    width: 200, height: 200),
                 const SizedBox(height: 24),
-
                 Text("Types of Tasks", style: headlineStyle),
                 const SizedBox(height: 8),
                 Text.rich(
@@ -71,32 +85,32 @@ class TutorialScreen extends StatelessWidget {
                         style: TextStyle(fontWeight: FontWeight.bold),
                       ),
                       const TextSpan(
-                        text: "Used to log when you last did an activity. No reminders are set.\n\n",
+                        text:
+                            "Used to log when you last did an activity. No reminders are set.\n\n",
                       ),
                       const TextSpan(
                         text: "Reminder Tasks: ",
                         style: TextStyle(fontWeight: FontWeight.bold),
                       ),
                       const TextSpan(
-                        text: "Send you notifications. You can choose between:\n"
+                        text:
+                            "Send you notifications. You can choose between:\n"
                             "• One-Time – fires once.\n"
                             "• Repetitive – repeats at a custom interval.",
                       ),
                     ],
                   ),
                 ),
-
                 const SizedBox(height: 24),
-
                 Text("Task View", style: headlineStyle),
                 const SizedBox(height: 8),
-                Image.asset('images/tasks_list_view_unpopulated.jpg', width: 200, height: 350),
+                Image.asset('images/tasks_list_view_unpopulated.jpg',
+                    width: 200, height: 350),
                 Text(
                   "This screen shows all tasks you've created — both Tracker and Reminder types — in one place.",
                   style: bodyStyle,
                 ),
                 const SizedBox(height: 24),
-
                 Text("Settings", style: headlineStyle),
                 const SizedBox(height: 8),
                 Image.asset('images/settings.jpg', width: 200, height: 200),
@@ -106,20 +120,23 @@ class TutorialScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 40),
                 Center(
-
                   child: ElevatedButton(
-                    onPressed: () => Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const MyHomePage())),
+                    onPressed: _gotIt,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xff676690),
-                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 24, vertical: 12),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(20)),
                     ),
                     child: const Text(
                       'Got it!',
-                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
+                      style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white),
                     ),
                   ),
-                
                 ),
                 const SizedBox(height: 20),
               ],
@@ -130,4 +147,3 @@ class TutorialScreen extends StatelessWidget {
     );
   }
 }
-
