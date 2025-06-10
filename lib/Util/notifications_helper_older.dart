@@ -936,6 +936,8 @@ debugPrint("✅ Notification RESCHEDULED!");
     final now = DateTime.now();
     return int.parse("$taskId${now.millisecondsSinceEpoch.remainder(100000)}");
   }
+
+  askForNotificationPermissions() {}
 }
 // final taskId = int.tryParse(action.payload?['taskId'] ?? '');
 // if (taskId == null) return;

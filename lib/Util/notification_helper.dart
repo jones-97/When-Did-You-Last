@@ -3,6 +3,7 @@ import 'dart:typed_data';
 
 import 'package:awesome_notifications/awesome_notifications.dart';
 import 'package:flutter/material.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:workmanager/workmanager.dart';
 import '../Models/task.dart';
@@ -27,6 +28,7 @@ class NotificationHelper {
           playSound: true,
           enableVibration: true,
           vibrationPattern: Int64List.fromList([0, 500, 1000, 500]),
+          // soundSource: 'resource://raw/res_notification.mp3'
         ),
       ],
     );
@@ -43,13 +45,28 @@ class NotificationHelper {
     );
   }
 
-  static Future<void> init() async {
+  static Future<void> init({bool shouldRequestPermissions = true}) async {
     debugPrint(
         "NOTIF-HELPER:: Initialize NOTIFICATIONS ONLY NO BACKGROUND called");
     await initializeForBackground();
 
-    //Now we request permissions in the foreground ONLY
+    if (shouldRequestPermissions) {
+           //Now we request permissions in the foreground ONLY
     await AwesomeNotifications().requestPermissionToSendNotifications();
+    }
+ 
+  }
+  
+  static Future<void> askForNotificationPermissions() async {
+    //THIS IS ANOTHER ONE BUT DONE IN INIT METHOD
+    if (await Permission.notification.isDenied) {
+      await Permission.notification.request();
+    }
+    
+    // For AwesomeNotifications (if you're using it)
+    if (!await AwesomeNotifications().isNotificationAllowed()) {
+      await AwesomeNotifications().requestPermissionToSendNotifications();
+    }
   }
 
   @pragma('vm:entry-point')

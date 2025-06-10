@@ -6,7 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 // import 'package:android_intent_plus/android_intent.dart';
 // import 'package:android_intent_plus/flag.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
-
+import 'Util/task_backup.dart';
 import 'package:provider/provider.dart';
 import 'Util/theme_provider.dart';
 import 'Util/ringtone_picker.dart';
@@ -239,14 +239,32 @@ class _SettingsState extends State<Settings> {
               });
             },
           ),
-          SwitchListTile(
-            title: const Text("Dark Mode"),
-            value: themeProvider.isDarkMode,
-            onChanged: (value) {
-              themeProvider
-                  .toggleTheme(value); // Provider will handle the UI update
-            },
-          ),
+          ListTile(
+            title: Text("App Theme"),
+            subtitle: Text("Select preferred theme"),
+            trailing: DropdownButton<ThemeMode>(
+  value: Provider.of<ThemeProvider>(context).themeMode,
+  onChanged: (ThemeMode? newValue) {
+    if (newValue != null) {
+      Provider.of<ThemeProvider>(context, listen: false).toggleTheme(newValue);
+    }
+  },
+  items: const [
+    DropdownMenuItem(
+      value: ThemeMode.system,
+      child: Text("System Theme"),
+    ),
+    DropdownMenuItem(
+      value: ThemeMode.light,
+      child: Text("Light Theme"),
+    ),
+    DropdownMenuItem(
+      value: ThemeMode.dark,
+      child: Text("Dark Theme"),
+    ),
+  ],
+),
+      ),
           ListTile(
             title: const Text("Revisit Battery Permissions"),
             subtitle: const Text(
@@ -303,6 +321,7 @@ ListTile(
   trailing: const Icon(Icons.file_upload),
   onTap: () {
     // TODO: Implement export logic
+    TaskBackup().exportTasks();
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text("Export not yet implemented.")),
     );
@@ -314,6 +333,7 @@ ListTile(
   trailing: const Icon(Icons.file_download),
   onTap: () {
     // TODO: Implement import logic
+    TaskBackup().importTasks();
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text("Import not yet implemented.")),
     );
@@ -329,7 +349,7 @@ ListTile(
       applicationName: "When Did You Last",
       applicationVersion: "1.0.0",
       applicationIcon: const Icon(Icons.access_time),
-      applicationLegalese: "© 2025 Your Name or Company",
+      applicationLegalese: "© 2025 JM2 Apps",
       children: [
         const Padding(
           padding: EdgeInsets.only(top: 15),

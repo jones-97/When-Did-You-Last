@@ -30,17 +30,20 @@ class _AppLifecycleManagerState extends State<AppLifecycleManager> with WidgetsB
     super.dispose();
   }
 
-  // @override
-  // void didChangeAppLifecycleState(AppLifecycleState state) {
-  //   if (state == AppLifecycleState.resumed) {
-  //     // Only handle lifecycle events after intro is complete
-  //     final prefs = Provider.of<SharedPreferences>(context, listen: false);
-  //     if (prefs.getBool('intro_shown') ?? false) {
-  //       _handleAppResume();
-  //     }
-  //   }
-  // }
+/*
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      // Only handle lifecycle events after intro is complete
+      final prefs = Provider.of<SharedPreferences>(context, listen: false);
+      if (prefs.getBool('intro_shown') ?? false) {
+        _handleAppResume();
+      }
+    }
+  }
+*/
 
+/*
   @override
 void didChangeAppLifecycleState(AppLifecycleState state) {
   if (state == AppLifecycleState.resumed && _isInitialized) {
@@ -54,7 +57,16 @@ void didChangeAppLifecycleState(AppLifecycleState state) {
     _isInitialized = true;
   }
 }
+*/
 
+  @override
+void didChangeAppLifecycleState(AppLifecycleState state) {
+  if (state == AppLifecycleState.resumed) {
+    _handleAppResume();
+  }
+}
+
+/*
   Future<void> _handleAppResume() async {
     try {
       await NotificationHelper.init();
@@ -64,6 +76,7 @@ void didChangeAppLifecycleState(AppLifecycleState state) {
       debugPrint("App resume error: $e");
     }
   }
+  */
 
   // In app_lifecycle_manager.dart
 Future<void> _rescheduleAllTasks() async {
@@ -90,6 +103,18 @@ Future<void> _rescheduleAllTasks() async {
     }
   }
 }
+
+  Future<void> _handleAppResume() async {
+  final prefs = await SharedPreferences.getInstance();
+  if (prefs.getBool('intro_shown') ?? false) {
+    try {
+      await NotificationHelper.init();
+      await _rescheduleAllTasks();
+    } catch (e) {
+      debugPrint("Resume error: $e");
+    }
+  }
+  }
 
   @override
   Widget build(BuildContext context) {

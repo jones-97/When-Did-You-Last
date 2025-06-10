@@ -59,6 +59,34 @@ class Task {
       notificationsEnabled: map['notifications_enabled'] == 1,
     );
   }
+
+   Map<String, dynamic> toJson() => {
+    'id': id,
+      'notification_id' : notificationId,
+      'name': name,
+      'details': details,
+      'task_type': taskType,
+      'duration_type': durationType,
+      'auto_repeat' : autoRepeat ? 1 : 0,
+      'is_active': isActive ? 1 : 0,
+      'custom_interval': customInterval,
+      'notification_time': notificationTime,
+      'notifications_enabled': notificationsEnabled ? 1 : 0,
+  };
+
+  static Task fromJson(Map<String, dynamic> json) => Task(
+    id: json['id'],
+      notificationId: json['notification_id'],
+      name: json['name'] ?? '',
+      details: json['details'] ?? '',
+      taskType: json['task_type'] ?? 'No Alert/Tracker',
+      durationType: json['duration_type'] ?? 'None',
+      autoRepeat: json['auto_repeat'] == 1,
+      customInterval: json['custom_interval'],
+      notificationTime: json['notification_time'],
+      isActive: json['is_active'] == 1,
+      notificationsEnabled: json['notifications_enabled'] == 1,
+  );
   
   Task copyWith({
     int? id,

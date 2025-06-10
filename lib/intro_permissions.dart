@@ -3,6 +3,8 @@ import 'package:device_info_plus/device_info_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:when_did_you_last/Util/notifications_helper_older.dart';
+import 'package:when_did_you_last/app_lifecycle_manager.dart';
 import 'package:when_did_you_last/home_page.dart';
 import 'tutorial_screen.dart';
 // import 'package:android_intent_plus/android_intent.dart';
@@ -65,55 +67,56 @@ class _IntroPermissionsScreenState extends State<IntroPermissionsScreen> {
     }
   }
 
-  Future<void> _requestPermissions() async {
-    //older
-    setState(() => _isLoading = true);
-
-    try {
-      // 1. Request notification permission (shows system dialog immediately)
-      if (Platform.isAndroid) {
-        // First try the standard permission handler
-        var notificationStatus = await Permission.notification.request();
-
-        // Then fallback to AwesomeNotifications dialog if needed
-        if (!await AwesomeNotifications().isNotificationAllowed()) {
-          // Show a dialog explaining why we need notifications first
-          bool proceed = await showDialog(
-            context: context,
-            builder: (context) => AlertDialog(
-              backgroundColor: const Color.fromARGB(243, 230, 230, 230),
-              title: const Text("Notification Permission Needed"),
-              content: const Text(
-                  "To deliver reminders reliably, please allow notifications."),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(context, false),
-                  child: const Text("Not Now"),
-                ),
-                TextButton(
-                  onPressed: () => Navigator.pop(context, true),
-                  child: const Text("Continue"),
-                ),
-              ],
-            ),
-          );
-
-          if (proceed) {
-            await AwesomeNotifications().requestPermissionToSendNotifications();
-          }
-        }
-      }
-      // Rest of your permission requests...
-    } finally {
-      setState(() => _isLoading = false);
+ Future<void> _requestPermissions() async {
+  setState(() => _isLoading = true);
+  
+  try {
+    // Only show explanation dialog if permissions were previously denied
+    final notificationStatus = await Permission.notification.status;
+    if (notificationStatus.isDenied) {
+      final proceed = await showPermissionExplanationDialog();
+      if (!proceed) return;
     }
+    
+    await _requestNotificationPermission();
+    await NotificationHelper().askForNotificationPermissions();
+    await _checkExactAlarmPermission();
+    await _isBatteryOptimizationDisabled();
+    
+  } finally {
+    setState(() => _isLoading = false);
+    _checkPermissions(); // Refresh UI state
   }
+}
 
+Future<bool> showPermissionExplanationDialog() async {
+  return await showDialog<bool>(
+    context: context,
+    builder: (context) => AlertDialog(
+      icon: Icon(Icons.info),
+      title: Text("Permissions Needed"),
+      content: Text("We need these permissions for better app functionality."),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context, false),
+          child: Text("Not Now"),
+        ),
+        TextButton(
+          onPressed: () => Navigator.pop(context, true),
+          child: Text("Continue"),
+        ),
+      ],
+    ),
+  ) ?? false;
+}
+
+  //IGNORE
   Future<void> requestNotificationPermission() async {
     if (await Permission.notification.isDenied) {
       await Permission.notification.request();
     }
   }
+
 
   Future<void> _requestNotificationPermission() async {
     final PermissionStatus status = await Permission.notification.request();
@@ -121,6 +124,7 @@ class _IntroPermissionsScreenState extends State<IntroPermissionsScreen> {
       // Notification permissions granted
     } else if (status.isDenied) {
       // Notification permissions denied
+      // await showPermissionExplanationDialog();
     } else if (status.isPermanentlyDenied) {
       // Notification permissions permanently denied, open app settings
       await openAppSettings();
@@ -158,22 +162,24 @@ class _IntroPermissionsScreenState extends State<IntroPermissionsScreen> {
   Future<void> _completeSetup() async {
     final prefs = await SharedPreferences.getInstance();
 
-    // await prefs.setBool('intro_shown', true);
+    await prefs.setBool('intro_shown', true);
 
-    if (prefs.getBool('intro_shown') == true) {
+    widget.onComplete();
 
-        Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (_) => const MyHomePage()));
-    } else {
-      // Navigate to TutorialScreen after completing setup
-        Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (_) => const TutorialScreen()),
-      );
-    }
-
-    widget.onComplete(); // Use the callback instead of direct navigation
+    // Then navigate based on tutorial completion
+  if (prefs.getBool('tutorial_completed') != true) {
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(builder: (_) => const TutorialScreen()),
+    );
+  } else {
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(
+        builder: (_) => AppLifecycleManager(child: const MyHomePage()),
+      ),
+    );
+  }
   }
 
   @override

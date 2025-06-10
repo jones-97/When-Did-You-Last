@@ -333,7 +333,7 @@ class _TasksListState extends State<TasksList> {
             _buildSectionTitle("⏰ Reminder Tasks",
                 color: Color.fromARGB(255, 189, 135, 125)),
             _buildTaskSection("Tasks Due Today", tasksDueToday),
-            _buildTaskSection("Tasks Due In Two Days", tasksDueInTwoDays),
+            _buildTaskSection("Tasks Due Tomorrow", tasksDueInTwoDays),
             const SizedBox(height: 20),
             _buildTaskSection("Future Tasks", futureTasks),
             // const SizedBox(height: 20),

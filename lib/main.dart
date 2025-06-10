@@ -1,32 +1,23 @@
-import 'package:awesome_notifications/awesome_notifications.dart';
 import 'package:flutter/material.dart';
-// import 'Data/database_helper.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:sqflite_common_ffi_web/sqflite_ffi_web.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:timezone/data/latest.dart' as tz;
 import 'package:shared_preferences/shared_preferences.dart';
-// import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:device_info_plus/device_info_plus.dart';
-// import 'package:android_intent_plus/android_intent.dart';
-// import 'package:android_intent_plus/flag.dart';
 import 'package:when_did_you_last/Util/loading_screen.dart';
 import 'package:when_did_you_last/app_lifecycle_manager.dart';
 import 'package:when_did_you_last/intro_permissions.dart';
-// import 'package:when_did_you_last/tutorial_screen.dart';
 import 'package:workmanager/workmanager.dart';
-// import 'dart:io';
-// import 'package:when_did_you_last/settings.dart';
 import 'package:provider/provider.dart';
 import 'Models/task.dart';
 import 'Util/theme_provider.dart';
 import 'Util/database_helper.dart';
 import 'Util/notification_helper.dart';
-// import 'dart:io';
 import 'home_page.dart'; // Import the new home.dart file
 
-//Decided name: JM2 Apps
+//Decided developer name: JM2 Apps
 
 late final SharedPreferences prefs;
 
@@ -47,33 +38,13 @@ final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 }
 */
 
-Future<bool> _loadEverything() async {
-  await _initializeAppServices();
-  return true;
-}
-
+/*
 Future<void> _requestNotificationPermission() async {
   if (await Permission.notification.isDenied) {
     await Permission.notification.request();
   }
 }
-
-void handleNotificationResponse(String payload) async {
-  List<String> parts = payload.split(":");
-  int taskId = int.parse(parts[1]);
-
-  // Cancel the notification first so it disappears
-  await NotificationHelper.cancelNotification(taskId); // <-- Add this line
-
-  if (parts[0] == "STOP") {
-    await NotificationHelper.cancelNotification(taskId);
-  } else if (parts[0] == "CONTINUE") {
-    Task? task = await DatabaseHelper().getTaskById(taskId);
-    if (task != null) {
-      await NotificationHelper.scheduleNotification(task);
-    }
-  }
-}
+*/
 
 /*
 Future<void> _requestNotificationPermission() async {
@@ -106,6 +77,28 @@ void main() async {
   }
 }
 
+Future<bool> _loadEverything() async {
+  await _initializeAppServices();
+  return true;
+}
+
+void handleNotificationResponse(String payload) async {
+  List<String> parts = payload.split(":");
+  int taskId = int.parse(parts[1]);
+
+  // Cancel the notification first so it disappears
+  await NotificationHelper.cancelNotification(taskId); // <-- Add this line
+
+  if (parts[0] == "STOP") {
+    await NotificationHelper.cancelNotification(taskId);
+  } else if (parts[0] == "CONTINUE") {
+    Task? task = await DatabaseHelper().getTaskById(taskId);
+    if (task != null) {
+      await NotificationHelper.scheduleNotification(task);
+    }
+  }
+}
+
 Future<void> _initializeAppServices() async {
   try {
     if (!kIsWeb) {
@@ -114,7 +107,7 @@ Future<void> _initializeAppServices() async {
       // Split heavy operations with delays
       await Future.delayed(const Duration(milliseconds: 100));
 
-      await NotificationHelper.init();
+      await NotificationHelper.init(shouldRequestPermissions: false);
       await Future.delayed(const Duration(milliseconds: 100));
 
       await Workmanager().initialize(callbackDispatcher, isInDebugMode: false);
@@ -363,7 +356,7 @@ class MyApp extends StatelessWidget {
               debugShowCheckedModeBanner: false,
               theme: ThemeData.light(),
               darkTheme: ThemeData.dark(),
-              themeMode: themeProvider.isDarkMode ? ThemeMode.dark : ThemeMode.light,
+              themeMode: Provider.of<ThemeProvider>(context).themeMode,
               home: _buildHomeScreen(introCompleted, prefs),
             );
           },

@@ -1,6 +1,7 @@
 // tutorial_screen.dart
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:when_did_you_last/app_lifecycle_manager.dart';
 import 'package:when_did_you_last/home_page.dart';
 
 class TutorialScreen extends StatefulWidget {
@@ -14,18 +15,21 @@ class TutorialScreen extends StatefulWidget {
 class _TutorialScreenState extends State<TutorialScreen> {
 
   Future<void> _gotIt() async {
-    final prefs = await SharedPreferences.getInstance();
-
-    await prefs.setBool('intro_shown', true);
-
-    Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const MyHomePage()));
-  }
+  final prefs = await SharedPreferences.getInstance();
+  await prefs.setBool('tutorial_completed', true);
+  Navigator.pushReplacement(
+    context,
+    MaterialPageRoute(
+      builder: (_) => AppLifecycleManager(child: const MyHomePage()),
+    ),
+  );
+}
 
   @override
   Widget build(BuildContext context) {
     final headlineStyle = Theme.of(context).textTheme.titleLarge?.copyWith(
           fontWeight: FontWeight.bold,
-          color: Colors.orange[800],
+          color: Colors.deepOrange[200],
         );
     final bodyStyle = Theme.of(context).textTheme.bodyMedium?.copyWith(
           height: 1.6,
@@ -35,7 +39,7 @@ class _TutorialScreenState extends State<TutorialScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('How To Use'),
-        backgroundColor: const Color.fromARGB(255, 245, 184, 43),
+        backgroundColor: const Color.fromARGB(255, 175, 110, 124),
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -47,15 +51,16 @@ class _TutorialScreenState extends State<TutorialScreen> {
               children: [
                 Text("Home Screen", style: headlineStyle),
                 const SizedBox(height: 8),
-                Image.asset('images/calendar_view.jpg',
-                    width: 200, height: 200),
+                Image.asset('assets/images/calendar_view.jpg',
+                    width: 200, height: 200,
+                    errorBuilder: (context, error, stackTrace) => Icon(Icons.error)),
                 const SizedBox(height: 8),
                 Text(
                   "When you complete a task on a specific date, that date is highlighted in green on the calendar. "
                   "Tapping the date shows the Date View, where you can see all completed tasks from that day.\n",
                   style: bodyStyle,
                 ),
-                Image.asset('images/date_view.jpg', width: 200, height: 200),
+                Image.asset('assets/images/date_view.jpg', width: 200, height: 200, errorBuilder: (context, error, stackTrace) => Icon(Icons.error)),
                 const SizedBox(height: 24),
                 Text("Menu Access", style: headlineStyle),
                 const SizedBox(height: 8),
@@ -71,8 +76,8 @@ class _TutorialScreenState extends State<TutorialScreen> {
                   "This takes you to the New Task screen.\n",
                   style: bodyStyle,
                 ),
-                Image.asset('images/new_task_view_unpopulated.jpg',
-                    width: 200, height: 200),
+                Image.asset('assets/images/new_task_view_unpopulated.jpg',
+                    width: 200, height: 200, errorBuilder: (context, error, stackTrace) => Icon(Icons.error)),
                 const SizedBox(height: 24),
                 Text("Types of Tasks", style: headlineStyle),
                 const SizedBox(height: 8),
@@ -104,8 +109,8 @@ class _TutorialScreenState extends State<TutorialScreen> {
                 const SizedBox(height: 24),
                 Text("Task View", style: headlineStyle),
                 const SizedBox(height: 8),
-                Image.asset('images/tasks_list_view_unpopulated.jpg',
-                    width: 200, height: 350),
+                Image.asset('assets/images/tasks_list_view_unpopulated.jpg',
+                    width: 200, height: 350, errorBuilder: (context, error, stackTrace) => Icon(Icons.error)),
                 Text(
                   "This screen shows all tasks you've created — both Tracker and Reminder types — in one place.",
                   style: bodyStyle,
@@ -113,7 +118,7 @@ class _TutorialScreenState extends State<TutorialScreen> {
                 const SizedBox(height: 24),
                 Text("Settings", style: headlineStyle),
                 const SizedBox(height: 8),
-                Image.asset('images/settings.jpg', width: 200, height: 200),
+                Image.asset('assets/images/settings.jpg', width: 200, height: 200, errorBuilder: (context, error, stackTrace) => Icon(Icons.error)),
                 Text(
                   "From the Settings screen, you can customize how the app works — including notification behavior, task tracking, and more.",
                   style: bodyStyle,
